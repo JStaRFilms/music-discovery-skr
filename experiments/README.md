@@ -9,6 +9,7 @@ John's library before any app UI is built. See
 ```powershell
 uv venv --python 3.11
 uv sync --extra embed --extra dev
+uv pip install --reinstall torch --torch-backend=cu126
 uv run music-discovery inventory
 uv run music-discovery select-sample
 uv run music-discovery queries

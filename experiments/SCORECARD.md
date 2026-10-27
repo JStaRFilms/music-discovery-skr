@@ -6,10 +6,10 @@ Precision@5 and timestamp hit rate come from John's marks in
 
 | Date | Model (revision) | Tier | P@5 | Timestamp hit | Win/s | Device | Notes |
 |---|---|---|---|---|---|---|---|
-| | `laion/larger_clap_music` (`a0b4534a…`) | 1 concrete | | | | | |
-| | `laion/larger_clap_music` (`a0b4534a…`) | 2 emotional | | | | | |
-| | `laion/larger_clap_music` (`a0b4534a…`) | 3 temporal | | | | | |
-| | `laion/larger_clap_music` (`a0b4534a…`) | 4 lyric vs sound | | | | | |
+| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 1 concrete | pending judging | pending | 5.5 | GTX 1650 CUDA | 200 windows / 40 tracks indexed |
+| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 2 emotional | pending judging | pending | 5.5 | GTX 1650 CUDA | blind pack generated, 75 excerpts |
+| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 3 temporal | pending judging | pending | 5.5 | GTX 1650 CUDA | sparse windows only in run 1 |
+| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 4 lyric vs sound | pending judging | pending | 5.5 | GTX 1650 CUDA | lyrics not yet transcribed |
 | | `laion/clap-htsat-fused` (`365dea6e…`) | 1–4 | | | | | comparator |
 | | CLaMP 3 (`sander-wood/clamp3`) | 1–4 | | | | | experiment-only license |
 
