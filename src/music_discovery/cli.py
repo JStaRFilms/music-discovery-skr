@@ -7,6 +7,7 @@ from pathlib import Path
 from . import config, db as dbmod
 from .embed import embed_texts, load_clap, run_index
 from .evaluate import make_blind_pack, scorecard
+from .health import check_model
 from .inventory import run_inventory
 from .queries import QUERIES, write_queries
 from .sample import select_sample, write_sample
@@ -49,6 +50,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--judgements", type=Path, default=Path("experiments/blind_pack/judgements.csv"))
 
+    p = sub.add_parser("check-model")
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+
     p = sub.add_parser("queries")
     p.add_argument("--out", type=Path, default=Path("experiments/queries.json"))
 
@@ -78,6 +83,11 @@ def main(argv: list[str] | None = None) -> None:
             print(json.dumps(make_blind_pack(args.db, by_query, args.out), indent=2))
     elif args.cmd == "scorecard":
         print(json.dumps(scorecard(args.db, args.judgements), indent=2))
+    elif args.cmd == "check-model":
+        result = check_model(args.model, args.revision)
+        print(json.dumps(result, indent=2))
+        if not result["healthy"]:
+            raise SystemExit(f"model failed text-distinctness health check: {result}")
     elif args.cmd == "queries":
         write_queries(args.out)
         print(json.dumps({"queries": len(QUERIES), "out": str(args.out)}, indent=2))

@@ -34,3 +34,6 @@ packages = ["src/music_discovery"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "integration: loads a real model checkpoint (set MUSIC_DISCOVERY_RUN_INTEGRATION=1)",
+]
