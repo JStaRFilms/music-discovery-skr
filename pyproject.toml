@@ -1,0 +1,36 @@
+[project]
+name = "music-discovery"
+version = "0.1.0"
+description = "Local natural-language music discovery experiment (audio-grounded, passage-level)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "numpy>=1.26",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+embed = [
+    "torch",
+    "transformers>=4.40",
+    "soundfile>=0.12",
+]
+lyrics = [
+    "faster-whisper>=1.0",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+music-discovery = "music_discovery.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/music_discovery"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

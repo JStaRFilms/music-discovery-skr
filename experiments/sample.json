@@ -1,0 +1,291 @@
+{
+  "seed": 20261027,
+  "rule": {
+    "streambeats": 24,
+    "pixabay": 6,
+    "longtail": 6,
+    "root": 4
+  },
+  "tracks": [
+    {
+      "id": 444,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\100 Thieves Hype Tracks\\6. Supreme\\16. Made.wav",
+      "source_folder": "Stream Beats\\100 Thieves Hype Tracks\\6. Supreme",
+      "duration_seconds": 124.5,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 470,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Ambient\\04 Enchanting Table.wav",
+      "source_folder": "Stream Beats\\Ambient",
+      "duration_seconds": 125.024127,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 540,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Chiptune\\2. Pixel\\25. 1 Bit From Charlie.wav",
+      "source_folder": "Stream Beats\\Chiptune\\2. Pixel",
+      "duration_seconds": 114.0,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 729,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\EDM\\EDM\\5. Royal\\7. Rainbow Storm.wav",
+      "source_folder": "Stream Beats\\EDM\\EDM\\5. Royal",
+      "duration_seconds": 155.888479,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 834,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Hifi\\1. Groove\\02 Retrofuturism.wav",
+      "source_folder": "Stream Beats\\Hifi\\1. Groove",
+      "duration_seconds": 135.267875,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 890,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Hiphop\\2. Ghost\\1. Ghost Town.wav",
+      "source_folder": "Stream Beats\\Hiphop\\2. Ghost",
+      "duration_seconds": 128.451927,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 960,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Holiday\\A Very Lo-Fi Christmas\\05 Ice Cream In Winter.wav",
+      "source_folder": "Stream Beats\\Holiday\\A Very Lo-Fi Christmas",
+      "duration_seconds": 142.515556,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1319,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Lofi\\8. White\\20. Beauty for Sale.wav",
+      "source_folder": "Stream Beats\\Lofi\\8. White",
+      "duration_seconds": 139.5,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1390,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Senpai Artists\\Ryan King\\Little\\01 Little - Instrumental.wav",
+      "source_folder": "Stream Beats\\Senpai Artists\\Ryan King\\Little",
+      "duration_seconds": 169.475083,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1430,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\StreamBeats Originals\\If I Mess Up This Christmas\\It's Easy To Forget.wav",
+      "source_folder": "Stream Beats\\StreamBeats Originals\\If I Mess Up This Christmas",
+      "duration_seconds": 228.27542,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1532,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Synthwave\\6. Rose\\12. Odin_s Revenge.wav",
+      "source_folder": "Stream Beats\\Synthwave\\6. Rose",
+      "duration_seconds": 138.461542,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 360,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\100 Thieves Hype Tracks\\3. Cracked\\21. Atrophy.wav",
+      "source_folder": "Stream Beats\\100 Thieves Hype Tracks\\3. Cracked",
+      "duration_seconds": 155.52,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 492,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Ambient\\26 Iron Golem.wav",
+      "source_folder": "Stream Beats\\Ambient",
+      "duration_seconds": 140.0,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 541,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Chiptune\\2. Pixel\\3. Flying Penguins.wav",
+      "source_folder": "Stream Beats\\Chiptune\\2. Pixel",
+      "duration_seconds": 118.493333,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 709,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\EDM\\EDM\\5. Royal\\17. Something Dope.wav",
+      "source_folder": "Stream Beats\\EDM\\EDM\\5. Royal",
+      "duration_seconds": 122.817375,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 854,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Hifi\\1. Groove\\22 Cozy Snail.wav",
+      "source_folder": "Stream Beats\\Hifi\\1. Groove",
+      "duration_seconds": 139.154042,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 915,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Hiphop\\3. Assassin\\30. Slug Shot.wav",
+      "source_folder": "Stream Beats\\Hiphop\\3. Assassin",
+      "duration_seconds": 128.008333,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 973,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Holiday\\A Very Lo-Fi Christmas\\18 Family Reunion.wav",
+      "source_folder": "Stream Beats\\Holiday\\A Very Lo-Fi Christmas",
+      "duration_seconds": 122.723039,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1139,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Lofi\\2. Fantasy Arcade\\21. Harris Heller - Another Castle.wav",
+      "source_folder": "Stream Beats\\Lofi\\2. Fantasy Arcade",
+      "duration_seconds": 118.158662,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1389,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Senpai Artists\\Ryan King\\All My Faces - Instrumental\\9 today - instrumental master 1.wav",
+      "source_folder": "Stream Beats\\Senpai Artists\\Ryan King\\All My Faces - Instrumental",
+      "duration_seconds": 197.119917,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1398,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\StreamBeats Originals\\A StreamBeats and Friends Christmas (Instrumental)\\1. Comfy Christmas Sweaters (Instrumental).wav",
+      "source_folder": "Stream Beats\\StreamBeats Originals\\A StreamBeats and Friends Christmas (Instrumental)",
+      "duration_seconds": 160.765333,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 1462,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Synthwave\\2. Lone Wolf\\13. Freelancer.wav",
+      "source_folder": "Stream Beats\\Synthwave\\2. Lone Wolf",
+      "duration_seconds": 194.0,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 390,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\100 Thieves Hype Tracks\\4. Bounce\\21. All Tied Up.wav",
+      "source_folder": "Stream Beats\\100 Thieves Hype Tracks\\4. Bounce",
+      "duration_seconds": 142.745104,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 488,
+      "path": "E:\\Assets\\Audio\\Music\\Stream Beats\\Ambient\\22 Adiantum Leaves.wav",
+      "source_folder": "Stream Beats\\Ambient",
+      "duration_seconds": 138.89102,
+      "bucket": "streambeats"
+    },
+    {
+      "id": 218,
+      "path": "E:\\Assets\\Audio\\Music\\Pixabay\\Voice Over\\eco-technology-145636.mp3",
+      "source_folder": "Pixabay\\Voice Over",
+      "duration_seconds": 122.305281,
+      "bucket": "pixabay"
+    },
+    {
+      "id": 200,
+      "path": "E:\\Assets\\Audio\\Music\\Pixabay\\Suspensful Intro\\intense-intense-chase-investigation-music-412316.mp3",
+      "source_folder": "Pixabay\\Suspensful Intro",
+      "duration_seconds": 76.64325,
+      "bucket": "pixabay"
+    },
+    {
+      "id": 181,
+      "path": "E:\\Assets\\Audio\\Music\\Pixabay\\Jazz\\my-funny-valentine-158407.mp3",
+      "source_folder": "Pixabay\\Jazz",
+      "duration_seconds": 210.102844,
+      "bucket": "pixabay"
+    },
+    {
+      "id": 122,
+      "path": "E:\\Assets\\Audio\\Music\\Pixabay\\Calm\\relaxing-145038.mp3",
+      "source_folder": "Pixabay\\Calm",
+      "duration_seconds": 72.045688,
+      "bucket": "pixabay"
+    },
+    {
+      "id": 217,
+      "path": "E:\\Assets\\Audio\\Music\\Pixabay\\Vocals\\town-10169.mp3",
+      "source_folder": "Pixabay\\Vocals",
+      "duration_seconds": 182.465281,
+      "bucket": "pixabay"
+    },
+    {
+      "id": 172,
+      "path": "E:\\Assets\\Audio\\Music\\Pixabay\\Intro\\review-unboxing-157084.mp3",
+      "source_folder": "Pixabay\\Intro",
+      "duration_seconds": 283.846531,
+      "bucket": "pixabay"
+    },
+    {
+      "id": 258,
+      "path": "E:\\Assets\\Audio\\Music\\SoundQ Audio\\mixkit-hiding-under-707.mp3",
+      "source_folder": "SoundQ Audio",
+      "duration_seconds": 105.508458,
+      "bucket": "longtail"
+    },
+    {
+      "id": 58,
+      "path": "E:\\Assets\\Audio\\Music\\MixKit\\Calm\\mixkit-sicilian-cafe-600.mp3",
+      "source_folder": "MixKit\\Calm",
+      "duration_seconds": 147.46229,
+      "bucket": "longtail"
+    },
+    {
+      "id": 66,
+      "path": "E:\\Assets\\Audio\\Music\\MixKit\\UpBeat\\mixkit-hazy-after-hours-132.mp3",
+      "source_folder": "MixKit\\UpBeat",
+      "duration_seconds": 127.224,
+      "bucket": "longtail"
+    },
+    {
+      "id": 14,
+      "path": "E:\\Assets\\Audio\\Music\\christmas\\mixkit-golden-freezer-505.mp3",
+      "source_folder": "christmas",
+      "duration_seconds": 96.089297,
+      "bucket": "longtail"
+    },
+    {
+      "id": 252,
+      "path": "E:\\Assets\\Audio\\Music\\SoundQ Audio\\mixkit-deep-urban-623.mp3",
+      "source_folder": "SoundQ Audio",
+      "duration_seconds": 288.69229,
+      "bucket": "longtail"
+    },
+    {
+      "id": 11,
+      "path": "E:\\Assets\\Audio\\Music\\christmas\\mixkit-christmas-jazz-503.mp3",
+      "source_folder": "christmas",
+      "duration_seconds": 94.147324,
+      "bucket": "longtail"
+    },
+    {
+      "id": 7,
+      "path": "E:\\Assets\\Audio\\Music\\Can I call you rose.mp4",
+      "source_folder": "(root)",
+      "duration_seconds": 186.8863,
+      "bucket": "root"
+    },
+    {
+      "id": 32,
+      "path": "E:\\Assets\\Audio\\Music\\DRAKE - WHAT DID I MISS.mp4",
+      "source_folder": "(root)",
+      "duration_seconds": 242.635465,
+      "bucket": "root"
+    },
+    {
+      "id": 38,
+      "path": "E:\\Assets\\Audio\\Music\\I Want To Be Ninja! (Neenja) Original song by Jennifer Murphy.mp4",
+      "source_folder": "(root)",
+      "duration_seconds": 269.188934,
+      "bucket": "root"
+    },
+    {
+      "id": 222,
+      "path": "E:\\Assets\\Audio\\Music\\rexlambo-abyss.mp3",
+      "source_folder": "(root)",
+      "duration_seconds": 171.728975,
+      "bucket": "root"
+    }
+  ]
+}

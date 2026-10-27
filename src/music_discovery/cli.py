@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from . import config, db as dbmod
+from .embed import embed_texts, load_clap, run_index
+from .evaluate import make_blind_pack, scorecard
+from .inventory import run_inventory
+from .queries import QUERIES, write_queries
+from .sample import select_sample, write_sample
+from .search import load_matrix, rank_tracks
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="music-discovery")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("inventory")
+    p.add_argument("--root", type=Path, default=config.DEFAULT_MUSIC_ROOT)
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+
+    p = sub.add_parser("select-sample")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--out", type=Path, default=Path("experiments/sample.json"))
+
+    p = sub.add_parser("index")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--limit-tracks", type=int, default=None)
+    p.add_argument("--batch", type=int, default=4)
+
+    p = sub.add_parser("search")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--query", required=True)
+    p.add_argument("--top", type=int, default=5)
+
+    p = sub.add_parser("blind-pack")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--out", type=Path, default=Path("experiments/blind_pack"))
+
+    p = sub.add_parser("scorecard")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--judgements", type=Path, default=Path("experiments/blind_pack/judgements.csv"))
+
+    p = sub.add_parser("queries")
+    p.add_argument("--out", type=Path, default=Path("experiments/queries.json"))
+
+    args = parser.parse_args(argv)
+    config.ensure_dirs()
+
+    if args.cmd == "inventory":
+        print(json.dumps(run_inventory(args.db, args.root), indent=2))
+    elif args.cmd == "select-sample":
+        conn = dbmod.connect(args.db)
+        sample = select_sample(conn)
+        conn.close()
+        write_sample(sample, args.out)
+        print(json.dumps({"selected": len(sample), "out": str(args.out)}, indent=2))
+    elif args.cmd == "index":
+        print(json.dumps(run_index(args.db, args.model, args.revision, args.limit_tracks, args.batch), indent=2))
+    elif args.cmd in ("search", "blind-pack"):
+        matrix, meta = load_matrix(args.db, args.model, args.revision)
+        model, processor, device = load_clap(args.model, args.revision)
+        if args.cmd == "search":
+            vec = embed_texts(model, processor, device, [args.query])[0]
+            print(json.dumps(rank_tracks(matrix, meta, vec, args.top), indent=2, default=str))
+        else:
+            texts = [q["text"] for q in QUERIES]
+            vecs = embed_texts(model, processor, device, texts)
+            by_query = {q["id"]: rank_tracks(matrix, meta, vecs[i], 5) for i, q in enumerate(QUERIES)}
+            print(json.dumps(make_blind_pack(args.db, by_query, args.out), indent=2))
+    elif args.cmd == "scorecard":
+        print(json.dumps(scorecard(args.db, args.judgements), indent=2))
+    elif args.cmd == "queries":
+        write_queries(args.out)
+        print(json.dumps({"queries": len(QUERIES), "out": str(args.out)}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
