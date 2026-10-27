@@ -72,7 +72,7 @@ comfortably. Caption-first architectures are roadmap items, not v1.
 |---|---|---|
 | Runtime | Python 3.11 venv, local process | Installed; pin with uv lockfile |
 | Decode | FFmpeg 8.0, mono 48 kHz | Installed; log `ffmpeg -version` |
-| Embedding A | `laion/larger_clap_music` | HF rev `a0b4534a…`, Apache-2.0, 512-d |
+| Embedding A | `laion/larger_clap_music_and_speech` | HF rev `195c3a3e…`, Apache-2.0, 512-d. Amended 2026-10-27: the music-only checkpoint at `a0b4534a…` failed the text-distinctness health check at 0.999 and was rejected. See the run record. |
 | Embedding B | `laion/clap-htsat-fused` | HF rev `365dea6e…`, comparator only |
 | Embedding C | CLaMP 3, `sander-wood/clamp3` | Comparator only, see license note |
 | Search, experiment | NumPy exact cosine | No vector DB |

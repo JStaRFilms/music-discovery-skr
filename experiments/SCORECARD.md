@@ -6,10 +6,11 @@ Precision@5 and timestamp hit rate come from John's marks in
 
 | Date | Model (revision) | Tier | P@5 | Timestamp hit | Win/s | Device | Notes |
 |---|---|---|---|---|---|---|---|
-| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 1 concrete | pending judging | pending | 5.5 | GTX 1650 CUDA | 200 windows / 40 tracks indexed |
-| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 2 emotional | pending judging | pending | 5.5 | GTX 1650 CUDA | blind pack generated, 75 excerpts |
-| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 3 temporal | pending judging | pending | 5.5 | GTX 1650 CUDA | sparse windows only in run 1 |
-| 2026-10-27 | `laion/larger_clap_music` (`a0b4534a…`) | 4 lyric vs sound | pending judging | pending | 5.5 | GTX 1650 CUDA | lyrics not yet transcribed |
+| 2026-10-27 run 1 | `laion/larger_clap_music` (`a0b4534a…`) | 1–4 | INVALID | INVALID | 5.5 | GTX 1650 CUDA | Text tower collapsed (0.999). Pack withdrawn after 21 marks. |
+| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 1 concrete | pending judging | pending | 6.15 | GTX 1650 CUDA | 30 distinct tracks in pack |
+| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 2 emotional | pending judging | pending | 6.15 | GTX 1650 CUDA | blind_pack_run2, 75 excerpts |
+| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 3 temporal | pending judging | pending | 6.15 | GTX 1650 CUDA | sparse windows only |
+| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 4 lyric vs sound | pending judging | pending | 6.15 | GTX 1650 CUDA | lyrics not yet transcribed |
 | | `laion/clap-htsat-fused` (`365dea6e…`) | 1–4 | | | | | comparator |
 | | CLaMP 3 (`sander-wood/clamp3`) | 1–4 | | | | | experiment-only license |
 
