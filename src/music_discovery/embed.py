@@ -39,6 +39,17 @@ def load_clap(model_id: str, revision: str):
     return model, processor, device
 
 
+def features_to_numpy(feats) -> np.ndarray:
+    """Unwrap a Transformers feature output to a normalized float32 array.
+
+    Transformers v5 returns BaseModelOutputWithPooling (pooler_output holds
+    the projected vector); older versions return a bare tensor.
+    """
+    tensor = feats if hasattr(feats, "detach") else feats.pooler_output
+    arr = tensor.detach().cpu().numpy().astype(np.float32)
+    return arr / np.maximum(np.linalg.norm(arr, axis=1, keepdims=True), 1e-12)
+
+
 def embed_texts(model, processor, device: str, texts: list[str]) -> np.ndarray:
     import torch
 
@@ -46,8 +57,7 @@ def embed_texts(model, processor, device: str, texts: list[str]) -> np.ndarray:
     inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
         feats = model.get_text_features(**inputs)
-    arr = feats.detach().cpu().numpy().astype(np.float32)
-    return arr / np.maximum(np.linalg.norm(arr, axis=1, keepdims=True), 1e-12)
+    return features_to_numpy(feats)
 
 
 def embed_audio(model, processor, device: str, waves: list[np.ndarray]) -> np.ndarray:
@@ -57,8 +67,7 @@ def embed_audio(model, processor, device: str, waves: list[np.ndarray]) -> np.nd
     inputs = {k: v.to(device) if hasattr(v, "to") else v for k, v in inputs.items()}
     with torch.no_grad():
         feats = model.get_audio_features(**inputs)
-    arr = feats.detach().cpu().numpy().astype(np.float32)
-    return arr / np.maximum(np.linalg.norm(arr, axis=1, keepdims=True), 1e-12)
+    return features_to_numpy(feats)
 
 
 def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | None = None, batch: int = 4) -> dict:
