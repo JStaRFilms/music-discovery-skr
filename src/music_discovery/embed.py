@@ -10,6 +10,23 @@ from . import db as dbmod
 from .config import SAMPLE_RATE, WINDOW_SECONDS
 from .windows import dense_windows, sparse_windows
 
+
+def save_checkpoint(rows: list[np.ndarray], out_path: Path) -> None:
+    """Atomically replace the embeddings file, retrying transient Windows locks."""
+    import os
+    import time as _time
+
+    tmp = out_path.with_suffix(".tmp.npy")
+    np.save(tmp, np.stack(rows))
+    for attempt in range(6):
+        try:
+            os.replace(tmp, out_path)
+            return
+        except OSError:
+            if attempt == 5:
+                raise
+            _time.sleep(0.5 * (attempt + 1))
+
 TARGET_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS
 
 
@@ -81,6 +98,13 @@ def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | N
     existing = np.load(out_path) if out_path.exists() else np.empty((0, 512), dtype=np.float32)
     rows: list[np.ndarray] = [r for r in existing]
     next_row = len(rows)
+    # Self-heal: embedding rows recorded in the DB past the end of the file
+    # were lost in a failed checkpoint save. Drop them so they re-embed.
+    conn.execute(
+        "DELETE FROM embeddings WHERE model_id=? AND model_revision=? AND row_index>=?",
+        (model_id, revision, next_row),
+    )
+    conn.commit()
 
     model, processor, device = load_clap(model_id, revision)
     started = time.time()
@@ -119,8 +143,9 @@ def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | N
                 next_row += 1
                 n_windows += 1
         conn.commit()
-        np.save(out_path, np.stack(rows) if rows else existing)
-        print(f"indexed track {track['id']} windows+={len(waves)} total_rows={next_row}")
+        if rows:
+            save_checkpoint(rows, out_path)
+        print(f"indexed track {track['id']} windows+={len(waves)} total_rows={next_row}", flush=True)
     elapsed = max(time.time() - started, 1e-9)
     conn.close()
     return {"device": device, "windows_embedded": n_windows, "seconds": round(elapsed, 2),
