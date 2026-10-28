@@ -33,6 +33,23 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--limit-tracks", type=int, default=None)
     p.add_argument("--batch", type=int, default=4)
 
+    p = sub.add_parser("index-dense")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--batch", type=int, default=4)
+
+    p = sub.add_parser("index-all")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--batch", type=int, default=4)
+
+    p = sub.add_parser("compare-dense")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+
     p = sub.add_parser("search")
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
@@ -70,6 +87,14 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps({"selected": len(sample), "out": str(args.out)}, indent=2))
     elif args.cmd == "index":
         print(json.dumps(run_index(args.db, args.model, args.revision, args.limit_tracks, args.batch), indent=2))
+    elif args.cmd == "index-dense":
+        print(json.dumps(run_index(args.db, args.model, args.revision, batch=args.batch, kind="dense"), indent=2))
+    elif args.cmd == "index-all":
+        print(json.dumps(run_index(args.db, args.model, args.revision, batch=args.batch, all_tracks=True), indent=2))
+    elif args.cmd == "compare-dense":
+        from .compare import compare_dense
+
+        print(json.dumps(compare_dense(args.db, args.model, args.revision), indent=2))
     elif args.cmd in ("search", "blind-pack"):
         matrix, meta = load_matrix(args.db, args.model, args.revision)
         model, processor, device = load_clap(args.model, args.revision)

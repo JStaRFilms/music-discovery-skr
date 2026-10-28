@@ -8,7 +8,7 @@ import numpy as np
 
 from . import db as dbmod
 from .config import SAMPLE_RATE, WINDOW_SECONDS
-from .windows import sparse_windows
+from .windows import dense_windows, sparse_windows
 
 TARGET_SAMPLES = SAMPLE_RATE * WINDOW_SECONDS
 
@@ -70,9 +70,11 @@ def embed_audio(model, processor, device: str, waves: list[np.ndarray]) -> np.nd
     return features_to_numpy(feats)
 
 
-def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | None = None, batch: int = 4) -> dict:
+def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | None = None, batch: int = 4,
+              kind: str = "sparse", all_tracks: bool = False) -> dict:
     conn = dbmod.connect(db_path)
-    tracks = conn.execute("SELECT * FROM tracks WHERE selected=1 AND status='ok' ORDER BY id").fetchall()
+    where = "status='ok'" if all_tracks else "selected=1 AND status='ok'"
+    tracks = conn.execute(f"SELECT * FROM tracks WHERE {where} ORDER BY id").fetchall()
     if limit_tracks:
         tracks = tracks[:limit_tracks]
     out_path = db_path.parent / f"embeddings-{model_id.replace('/', '_')}.npy"
@@ -84,16 +86,16 @@ def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | N
     started = time.time()
     n_windows = 0
     for track in tracks:
-        wins = sparse_windows(float(track["duration_seconds"]))
+        wins = dense_windows(float(track["duration_seconds"])) if kind == "dense" else sparse_windows(float(track["duration_seconds"]))
         waves, win_ids = [], []
         for start, end in wins:
-            cur = conn.execute(
-                "INSERT OR IGNORE INTO windows(track_id,start_seconds,end_seconds,kind) VALUES(?,?,?, 'sparse')",
-                (track["id"], start, end),
+            conn.execute(
+                "INSERT OR IGNORE INTO windows(track_id,start_seconds,end_seconds,kind) VALUES(?,?,?,?)",
+                (track["id"], start, end, kind),
             )
             wid = conn.execute(
-                "SELECT id FROM windows WHERE track_id=? AND start_seconds=? AND kind='sparse'",
-                (track["id"], start),
+                "SELECT id FROM windows WHERE track_id=? AND start_seconds=? AND kind=?",
+                (track["id"], start, kind),
             ).fetchone()["id"]
             already = conn.execute(
                 "SELECT 1 FROM embeddings WHERE window_id=? AND model_id=? AND model_revision=?",

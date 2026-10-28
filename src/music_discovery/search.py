@@ -6,14 +6,16 @@ from pathlib import Path
 import numpy as np
 
 
-def load_matrix(db_path: Path, model_id: str, revision: str):
+def load_matrix(db_path: Path, model_id: str, revision: str, kind: str | None = "sparse"):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
+    kind_sql = " AND w.kind=?" if kind else ""
+    params = (model_id, revision, kind) if kind else (model_id, revision)
     rows = conn.execute(
-        """SELECT e.row_index, e.window_id, w.track_id, w.start_seconds, w.end_seconds, t.path, t.rel_path
+        f"""SELECT e.row_index, e.window_id, w.track_id, w.start_seconds, w.end_seconds, t.path, t.rel_path
            FROM embeddings e JOIN windows w ON w.id=e.window_id JOIN tracks t ON t.id=w.track_id
-           WHERE e.model_id=? AND e.model_revision=? ORDER BY e.row_index""",
-        (model_id, revision),
+           WHERE e.model_id=? AND e.model_revision=?{kind_sql} ORDER BY e.row_index""",
+        params,
     ).fetchall()
     conn.close()
     emb_path = db_path.parent / f"embeddings-{model_id.replace('/', '_')}.npy"
