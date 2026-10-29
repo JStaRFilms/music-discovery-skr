@@ -51,14 +51,37 @@ def detect_vocals(db_path: Path, model_id: str, revision: str, selected_only: bo
     return {"windows_scored": updated, "vocal_windows_at_0.5": vocal_windows}
 
 
+KNOWN_ARTIFACTS = {
+    "музыка", "music", "субтитры создавал dimatorzok", "subtitles by dimatorzok",
+    "thanks for watching", "thank you for watching",
+}
+
+
+def classify_trust(text: str, confidence: float | None, no_speech_prob: float | None) -> bool:
+    """Raw Whisper output is never trusted by default. This gate decides display/search use."""
+    cleaned = " ".join((text or "").strip().lower().strip(".! ").split())
+    if not cleaned or cleaned in KNOWN_ARTIFACTS:
+        return False
+    if no_speech_prob is not None and no_speech_prob >= 0.6:
+        return False
+    if confidence is not None and confidence < 0.5:
+        return False
+    return True
+
+
 def parse_transcription(payload: dict) -> dict:
     segments = payload.get("segments") or []
     logprobs = [s["avg_logprob"] for s in segments if "avg_logprob" in s]
     confidence = round(math.exp(sum(logprobs) / len(logprobs)), 4) if logprobs else None
+    no_speech = [s["no_speech_prob"] for s in segments if "no_speech_prob" in s]
+    no_speech_prob = round(sum(no_speech) / len(no_speech), 4) if no_speech else None
+    text = (payload.get("text") or "").strip()
     return {
-        "text": (payload.get("text") or "").strip(),
+        "text": text,
         "language": payload.get("language"),
         "confidence": confidence,
+        "no_speech_prob": no_speech_prob,
+        "trusted": classify_trust(text, confidence, no_speech_prob),
     }
 
 
@@ -110,7 +133,7 @@ def extract_excerpt(track_path: Path, start: float, end: float, out: Path) -> Pa
 def sync_lyrics_fts(conn) -> None:
     conn.execute("DELETE FROM lyrics_fts")
     conn.execute(
-        "INSERT INTO lyrics_fts(window_id, lyric_text) SELECT id, lyric_text FROM windows WHERE lyric_text IS NOT NULL AND lyric_text != ''"
+        "INSERT INTO lyrics_fts(window_id, lyric_text) SELECT id, lyric_text FROM windows WHERE lyric_text IS NOT NULL AND lyric_text != '' AND COALESCE(lyric_trusted, 1) = 1"
     )
     conn.commit()
 
@@ -139,8 +162,9 @@ def transcribe_vocals(db_path: Path, threshold: float = 0.5, selected_only: bool
                 extract_excerpt(Path(row["path"]), row["start_seconds"], row["end_seconds"], excerpt)
                 result = groq_transcribe_file(excerpt, api_key)
                 conn.execute(
-                    "UPDATE windows SET lyric_text=?, lyric_language=?, lyric_confidence=?, lyric_source=? WHERE id=?",
-                    (result["text"], result["language"], result["confidence"], f"groq:{GROQ_MODEL}", row["window_id"]),
+                    "UPDATE windows SET lyric_text=?, lyric_language=?, lyric_confidence=?, lyric_source=?, no_speech_prob=?, lyric_trusted=? WHERE id=?",
+                    (result["text"], result["language"], result["confidence"], f"groq:{GROQ_MODEL}",
+                     result["no_speech_prob"], int(result["trusted"]), row["window_id"]),
                 )
                 conn.commit()
                 done += 1

@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS windows (
     lyric_language TEXT,
     lyric_confidence REAL,
     lyric_source TEXT,
+    no_speech_prob REAL,
+    lyric_trusted INTEGER,
     UNIQUE(track_id, start_seconds, kind)
 );
 CREATE TABLE IF NOT EXISTS embeddings (
@@ -72,4 +74,9 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(windows)").fetchall()}
+    for col, ddl in (("no_speech_prob", "REAL"), ("lyric_trusted", "INTEGER")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE windows ADD COLUMN {col} {ddl}")
+    conn.commit()
     return conn
