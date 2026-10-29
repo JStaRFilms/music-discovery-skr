@@ -1,6 +1,6 @@
 import math
 
-from music_discovery.lyrics import classify_trust, parse_transcription, vocal_probability
+from music_discovery.lyrics import assign_themes, classify_trust, parse_transcription, vocal_probability
 
 
 def test_vocal_probability_directions():
@@ -31,6 +31,13 @@ def test_classify_trust_rejects_artifacts_and_no_speech():
     assert classify_trust("real sung words here", 0.9, 0.9) is False
     assert classify_trust("real sung words here", 0.4, 0.1) is False
     assert classify_trust("real sung words here", 0.9, 0.1) is True
+
+
+def test_assign_themes_picks_strong_close_labels():
+    assert assign_themes({"love": 0.81, "loss": 0.76, "party": 0.4}) == ["love", "loss"]
+    assert assign_themes({"love": 0.44, "loss": 0.4}) == []
+    assert assign_themes({}) == []
+    assert assign_themes({"party": 0.9, "love": 0.88, "joy": 0.87}) == ["party", "love"]
 
 
 def test_classify_trust_rejects_short_fragments():

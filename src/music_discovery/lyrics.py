@@ -74,6 +74,58 @@ def classify_trust(text: str, confidence: float | None, no_speech_prob: float | 
     return True
 
 
+THEMES = {
+    "love": "song lyrics about love, romance and devotion",
+    "loss": "song lyrics about loss, heartbreak and longing",
+    "joy": "song lyrics about happiness, celebration and joy",
+    "party": "song lyrics about partying, dancing and nightlife",
+    "faith": "song lyrics about faith, hope and belief",
+    "story": "song lyrics telling a story about people and places",
+    "rebellion": "song lyrics about rebellion, attitude and confidence",
+    "calm": "song lyrics about peace, calm and reflection",
+}
+
+
+def assign_themes(scores: dict[str, float], min_score: float = 0.5, margin: float = 0.08,
+                  max_themes: int = 2) -> list[str]:
+    """Likely themes for one transcript: strong scores close to the window's best.
+
+    Margins between CLAP theme scores are thin (measured median 0.03), so
+    these are soft labels for display and ranking tilt, never hard gates.
+    """
+    if not scores:
+        return []
+    ranked = sorted(scores.items(), key=lambda kv: -kv[1])
+    top = ranked[0][1]
+    return [name for name, s in ranked if s >= min_score and s >= top - margin][:max_themes]
+
+
+def classify_lyric_themes(db_path: Path, model_id: str, revision: str) -> dict:
+    conn = dbmod.connect(db_path)
+    rows = conn.execute(
+        "SELECT id, lyric_text FROM windows WHERE lyric_trusted=1 AND lyric_text IS NOT NULL AND lyric_text != ''"
+    ).fetchall()
+    model, processor, device = load_clap(model_id, revision)
+    names = list(THEMES)
+    theme_vecs = embed_texts(model, processor, device, [THEMES[n] for n in names])
+    counts: dict[str, int] = {}
+    updated = 0
+    for start in range(0, len(rows), 64):
+        batch = rows[start:start + 64]
+        vecs = embed_texts(model, processor, device, [r["lyric_text"][:300] for r in batch])
+        scores = vecs @ theme_vecs.T
+        for row, line in zip(batch, scores):
+            labels = assign_themes({n: float(line[k]) for k, n in enumerate(names)})
+            for n in labels:
+                counts[n] = counts.get(n, 0) + 1
+            conn.execute("UPDATE windows SET lyric_themes=? WHERE id=?",
+                         (",".join(labels) if labels else None, row["id"]))
+            updated += 1
+    conn.commit()
+    conn.close()
+    return {"windows_classified": updated, "theme_counts": counts}
+
+
 def parse_transcription(payload: dict) -> dict:
     segments = payload.get("segments") or []
     logprobs = [s["avg_logprob"] for s in segments if "avg_logprob" in s]

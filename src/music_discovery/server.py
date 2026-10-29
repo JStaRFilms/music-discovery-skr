@@ -25,6 +25,8 @@ class SearchEngine:
         self._meta = None
         self._lyric_idx: list[int] | None = None
         self._lyric_vecs = None
+        self._theme_vecs = None
+        self._window_theme = None
 
     def _load(self):
         if self._matrix is not None:
@@ -102,6 +104,25 @@ class SearchEngine:
         self._lyric_vecs = np.vstack(vecs) if vecs else np.zeros((0, self._matrix.shape[1]), dtype=np.float32)
         return self._lyric_idx, self._lyric_vecs
 
+    def _theme_match(self, vec, lyric_vecs):
+        """Soft theme agreement between the query and each window's lyrics.
+
+        Theme vectors are the THEMES prompts from lyrics.py. The query's
+        affinity to each theme weights the window's affinity to it, so a
+        love-words query tilts toward love-labelled passages without any
+        hard gate.
+        """
+        if self._model is None:
+            return None
+        if self._theme_vecs is None:
+            from .embed import embed_texts
+            from .lyrics import THEMES
+
+            model, processor, device = self._model
+            self._theme_vecs = embed_texts(model, processor, device, list(THEMES.values()))
+            self._window_theme = lyric_vecs @ self._theme_vecs.T
+        return self._window_theme @ (self._theme_vecs @ vec)
+
     def _search_with_lyrics(self, vec, top: int, adjustments=None) -> list[dict]:
         """Rank trusted-lyric windows by sound and words together (Tier 4 v3 method)."""
         import numpy as np
@@ -114,6 +135,9 @@ class SearchEngine:
         sound = self._matrix[idx] @ vec
         words = lyric_vecs @ vec
         combined = _minmax(sound) + _minmax(words)
+        theme_match = self._theme_match(vec, lyric_vecs)
+        if theme_match is not None:
+            combined = combined + 0.5 * _minmax(theme_match)
         if adjustments is not None:
             combined = combined + adjustments[idx]
         order = np.argsort(-combined)
@@ -129,6 +153,8 @@ class SearchEngine:
                 }
                 if adjustments is not None:
                     entry["personal_adjustment"] = float(adjustments[idx[int(pos)]])
+                if theme_match is not None:
+                    entry["theme_score"] = float(theme_match[int(pos)])
                 best[row["track_id"]] = entry
             if len(best) >= top:
                 break
@@ -216,7 +242,7 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
         out = []
         for r in results:
             win = conn.execute(
-                "SELECT lyric_text, lyric_trusted, lyric_confidence, vocal_prob FROM windows WHERE id=?", (r["window_id"],)
+                "SELECT lyric_text, lyric_trusted, lyric_confidence, lyric_themes, vocal_prob FROM windows WHERE id=?", (r["window_id"],)
             ).fetchone()
             track = conn.execute(
                 "SELECT duration_seconds FROM tracks WHERE id=?", (r["track_id"],)
@@ -233,6 +259,8 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
                 "sound_score": r.get("sound_score"),
                 "word_score": r.get("word_score"),
                 "personal_adjustment": r.get("personal_adjustment"),
+                "theme_score": r.get("theme_score"),
+                "lyric_themes": [t for t in (win["lyric_themes"] or "").split(",") if t] if win else [],
                 "lyric_text": win["lyric_text"] if win else None,
                 "lyric_trusted": bool(win["lyric_trusted"]) if win and win["lyric_trusted"] is not None else None,
                 "lyric_confidence": win["lyric_confidence"] if win else None,
