@@ -7,10 +7,10 @@ Precision@5 and timestamp hit rate come from John's marks in
 | Date | Model (revision) | Tier | P@5 | Timestamp hit | Win/s | Device | Notes |
 |---|---|---|---|---|---|---|---|
 | 2026-10-27 run 1 | `laion/larger_clap_music` (`a0b4534a…`) | 1–4 | INVALID | INVALID | 5.5 | GTX 1650 CUDA | Text tower collapsed (0.999). Pack withdrawn after 21 marks. |
-| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 1 concrete | pending judging | pending | 6.15 | GTX 1650 CUDA | 30 distinct tracks in pack |
-| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 2 emotional | pending judging | pending | 6.15 | GTX 1650 CUDA | blind_pack_run2, 75 excerpts |
-| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 3 temporal | pending judging | pending | 6.15 | GTX 1650 CUDA | sparse windows only |
-| 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 4 lyric vs sound | pending judging | pending | 6.15 | GTX 1650 CUDA | lyrics not yet transcribed |
+| 2026-10-29 run 2 judged | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 1 concrete | 0.73 (11/15) | not scored | 6.15 | GTX 1650 CUDA | Piano 5/5, strings 2/5. Passes 0.4 kill bar |
+| 2026-10-29 run 2 judged | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 2 emotional | 0.85 (34/40) | not scored | 6.15 | GTX 1650 CUDA | Demure weakest at 2/5 |
+| 2026-10-29 run 2 judged | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 3 temporal | 0.93 (14/15) | not scored | 6.15 | GTX 1650 CUDA | Single passages judged, transition unverified |
+| 2026-10-29 run 2 judged | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 4 lyric vs sound | 0.20 (1/5) | not scored | 6.15 | GTX 1650 CUDA | No transcription yet; lyrics track must earn this |
 | 2026-10-29 | `laion/clap-htsat-fused` (`365dea6e…`) | 1–4 | sealed, unjudged | sealed | 6.68 | GTX 1650 CUDA | comparator pack generated, 31 distinct tracks |
 | 2026-10-29 | primary, dense vs sparse | 1–4 | unjudged | unjudged | 6.08 dense | GTX 1650 CUDA | mean top-5 overlap 3.4/5 |
 | 2026-10-29 | primary, full library | all | n/a | n/a | 5.50 | GTX 1650 CUDA | 1,548 tracks, 7,524 sparse windows |
