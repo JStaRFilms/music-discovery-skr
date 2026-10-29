@@ -32,3 +32,9 @@ coverage/
 .vscode/
 .idea/
 *.swp
+
+# --- Music discovery local artifacts (never commit) ---
+data/
+experiments/**/excerpts/
+experiments/**/mapping.json
+experiments/lyrics_review/
