@@ -16,6 +16,7 @@ type Result = {
   lyric_confidence?: number | null;
   vocal_prob: number | null;
   excerpt_url: string;
+  track_url?: string;
 };
 
 type Status = {
@@ -177,13 +178,29 @@ export default function App() {
                 <audio
                   controls
                   preload="none"
-                  src={result.excerpt_url}
+                  src={result.track_url ?? result.excerpt_url}
+                  onLoadedMetadata={(event) => {
+                    // Start at the matched passage; the whole track stays scrubbable.
+                    if (event.currentTarget.currentTime < result.start_seconds) {
+                      event.currentTarget.currentTime = result.start_seconds;
+                    }
+                  }}
+                  onError={(event) => {
+                    // Formats the browser cannot decode fall back to the passage excerpt.
+                    const el = event.currentTarget;
+                    if (!el.dataset.fallback) {
+                      el.dataset.fallback = "1";
+                      el.src = result.excerpt_url;
+                      el.load();
+                    }
+                  }}
                   onPlay={(event) => {
                     document.querySelectorAll("audio").forEach((other) => {
                       if (other !== event.currentTarget) other.pause();
                     });
                   }}
                 />
+                <div className="player-note">Full track — starts at the matched passage. Scrub to hear the rest.</div>
                 <div className="words">
                   {result.lyric_text ? (
                     <>
