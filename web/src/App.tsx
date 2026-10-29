@@ -9,7 +9,11 @@ type Result = {
   end_seconds: number;
   duration_seconds: number | null;
   score: number;
+  sound_score: number | null;
+  word_score: number | null;
   lyric_text: string | null;
+  lyric_trusted: boolean | null;
+  lyric_confidence: number | null;
   vocal_prob: number | null;
   excerpt_url: string;
 };
@@ -21,6 +25,7 @@ type Status = {
   tracks_total: number;
   sparse_windows: number;
   feedback_marks: number;
+  lyric_windows_trusted: number;
 };
 
 const MARKS = ["usable", "close", "wrong"] as const;
@@ -40,6 +45,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [marks, setMarks] = useState<Record<number, Mark>>({});
+  const [includeLyrics, setIncludeLyrics] = useState(false);
+  const [searchedWithLyrics, setSearchedWithLyrics] = useState(false);
 
   useEffect(() => {
     fetch("/api/status")
@@ -48,26 +55,37 @@ export default function App() {
       .catch(() => setError("Backend not reachable. Start the app with the launcher."));
   }, []);
 
-  async function onSearch(event: React.FormEvent) {
-    event.preventDefault();
-    if (!query.trim()) return;
+  async function runSearch(text: string, withLyrics: boolean) {
     setBusy(true);
     setError("");
     try {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, top: 5 }),
+        body: JSON.stringify({ query: text, top: 5, include_lyrics: withLyrics }),
       });
       if (!response.ok) throw new Error(`search failed (${response.status})`);
       const data = await response.json();
       setResults(data.results);
       setSearchedQuery(data.query);
+      setSearchedWithLyrics(Boolean(data.include_lyrics));
     } catch {
       setError("Search failed. The first search loads the model and can take a few seconds — try again.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onSearch(event: React.FormEvent) {
+    event.preventDefault();
+    if (!query.trim()) return;
+    await runSearch(query, includeLyrics);
+  }
+
+  function onToggleLyrics(event: React.ChangeEvent<HTMLInputElement>) {
+    const next = event.target.checked;
+    setIncludeLyrics(next);
+    if (searchedQuery) void runSearch(searchedQuery, next);
   }
 
   async function onMark(result: Result, mark: Mark) {
@@ -108,12 +126,26 @@ export default function App() {
             {busy ? "Listening…" : "Search"}
           </button>
         </form>
+        <label className="lyrics-toggle">
+          <input type="checkbox" checked={includeLyrics} onChange={onToggleLyrics} disabled={busy} />
+          <span>
+            Include lyrics in search
+            <span className="toggle-note">
+              {status
+                ? ` — matches sung words too, over ${status.lyric_windows_trusted.toLocaleString()} trusted passages only`
+                : " — matches sung words too, trusted passages only"}
+            </span>
+          </span>
+        </label>
         {error && <p className="error">{error}</p>}
         {busy && <p className="hint">First search warms up the model on your GPU. Later ones are quick.</p>}
 
         {searchedQuery && !busy && (
           <p className="searched">
-            Results for <strong>{searchedQuery}</strong> — judged by sound, not filenames.
+            Results for <strong>{searchedQuery}</strong> —{" "}
+            {searchedWithLyrics
+              ? "ranked by sound and sung words together, trusted lyrics only."
+              : "judged by sound, not filenames."}
           </p>
         )}
 
@@ -130,6 +162,11 @@ export default function App() {
                     {result.duration_seconds ? ` of ${fmt(result.duration_seconds)}` : ""}
                   </span>
                   <span>match {result.score.toFixed(2)}</span>
+                  {result.sound_score !== null && result.word_score !== null && (
+                    <span>
+                      sound {result.sound_score.toFixed(2)} · words {result.word_score.toFixed(2)}
+                    </span>
+                  )}
                 </div>
                 <audio
                   controls
@@ -142,9 +179,18 @@ export default function App() {
                   }}
                 />
                 <div className="words">
-                  {result.lyric_text
-                    ? `Words: ${result.lyric_text}`
-                    : "Words: not transcribed yet — judged on sound alone."}
+                  {result.lyric_text ? (
+                    <>
+                      <span className={result.lyric_trusted ? "badge trusted" : "badge low"}>
+                        {result.lyric_trusted
+                          ? `trusted words${result.lyric_confidence !== null ? ` · ${Math.round(result.lyric_confidence * 100)}%` : ""}`
+                          : `low-trust words${result.lyric_confidence !== null ? ` · ${Math.round(result.lyric_confidence * 100)}%` : ""}`}
+                      </span>
+                      <span className="lyric-text">“{result.lyric_text}”</span>
+                    </>
+                  ) : (
+                    "Words: none transcribed for this passage — sound only."
+                  )}
                 </div>
               </div>
               <div className="marks" role="group" aria-label="Your mark">
