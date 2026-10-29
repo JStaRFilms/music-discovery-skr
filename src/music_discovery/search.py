@@ -24,15 +24,21 @@ def load_matrix(db_path: Path, model_id: str, revision: str, kind: str | None = 
     return matrix[[r["row_index"] for r in meta]], meta
 
 
-def rank_tracks(matrix: np.ndarray, meta: list[dict], query_vec: np.ndarray, top_tracks: int = 5) -> list[dict]:
+def rank_tracks(matrix: np.ndarray, meta: list[dict], query_vec: np.ndarray, top_tracks: int = 5,
+                adjustments: np.ndarray | None = None) -> list[dict]:
     scores = matrix @ query_vec
+    if adjustments is not None:
+        scores = scores + adjustments
     order = np.argsort(-scores)
     best: dict[int, dict] = {}
     for idx in order:
         row = meta[int(idx)]
         tid = row["track_id"]
         if tid not in best:
-            best[tid] = {**row, "score": float(scores[int(idx)])}
+            entry = {**row, "score": float(scores[int(idx)])}
+            if adjustments is not None:
+                entry["personal_adjustment"] = float(adjustments[int(idx)])
+            best[tid] = entry
         if len(best) >= top_tracks:
             break
     return list(best.values())

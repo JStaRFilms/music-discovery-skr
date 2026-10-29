@@ -41,15 +41,40 @@ class SearchEngine:
     def device(self) -> str:
         return self._model[2] if self._model else "not loaded"
 
+    # Personal taste: passages similar to ones John marked usable are
+    # nudged up, similar-to-wrong nudged down. Small weights on purpose —
+    # taste tilts the ranking, it does not replace the query match.
+    TASTE_WEIGHTS = {"usable": 0.10, "close": 0.05, "wrong": -0.12}
+
+    def _taste_adjustments(self):
+        import numpy as np
+
+        adj = np.zeros(len(self._meta), dtype=np.float32)
+        row_of = {row["window_id"]: i for i, row in enumerate(self._meta)}
+        conn = dbmod.connect(self.db_path)
+        marks = conn.execute(
+            "SELECT window_id, mark FROM judgements WHERE window_id IS NOT NULL AND mark IN ('usable','close','wrong')"
+        ).fetchall()
+        conn.close()
+        by_mark: dict[str, list[int]] = {}
+        for m in marks:
+            if m["window_id"] in row_of:
+                by_mark.setdefault(m["mark"], []).append(row_of[m["window_id"]])
+        for mark, idxs in by_mark.items():
+            sims = self._matrix @ self._matrix[idxs].T
+            adj += self.TASTE_WEIGHTS[mark] * sims.max(axis=1)
+        return adj, sum(len(v) for v in by_mark.values())
+
     def search(self, query: str, top: int = 5, include_lyrics: bool = False) -> list[dict]:
         from .embed import embed_texts
 
         self._load()
         model, processor, device = self._model
         vec = embed_texts(model, processor, device, [query])[0]
+        adj, _used = self._taste_adjustments()
         if not include_lyrics:
-            return rank_tracks(self._matrix, self._meta, vec, top)
-        return self._search_with_lyrics(vec, top)
+            return rank_tracks(self._matrix, self._meta, vec, top, adjustments=adj)
+        return self._search_with_lyrics(vec, top, adjustments=adj)
 
     def _trusted_lyric_vectors(self):
         """CLAP text vectors for trusted lyric windows, embedded once and cached."""
@@ -77,7 +102,7 @@ class SearchEngine:
         self._lyric_vecs = np.vstack(vecs) if vecs else np.zeros((0, self._matrix.shape[1]), dtype=np.float32)
         return self._lyric_idx, self._lyric_vecs
 
-    def _search_with_lyrics(self, vec, top: int) -> list[dict]:
+    def _search_with_lyrics(self, vec, top: int, adjustments=None) -> list[dict]:
         """Rank trusted-lyric windows by sound and words together (Tier 4 v3 method)."""
         import numpy as np
 
@@ -89,17 +114,22 @@ class SearchEngine:
         sound = self._matrix[idx] @ vec
         words = lyric_vecs @ vec
         combined = _minmax(sound) + _minmax(words)
+        if adjustments is not None:
+            combined = combined + adjustments[idx]
         order = np.argsort(-combined)
         best: dict[int, dict] = {}
         for pos in order:
             row = self._meta[idx[int(pos)]]
             if row["track_id"] not in best:
-                best[row["track_id"]] = {
+                entry = {
                     **row,
                     "score": float(combined[int(pos)]),
                     "sound_score": float(sound[int(pos)]),
                     "word_score": float(words[int(pos)]),
                 }
+                if adjustments is not None:
+                    entry["personal_adjustment"] = float(adjustments[idx[int(pos)]])
+                best[row["track_id"]] = entry
             if len(best) >= top:
                 break
         return list(best.values())
@@ -202,6 +232,7 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
                 "score": r["score"],
                 "sound_score": r.get("sound_score"),
                 "word_score": r.get("word_score"),
+                "personal_adjustment": r.get("personal_adjustment"),
                 "lyric_text": win["lyric_text"] if win else None,
                 "lyric_trusted": bool(win["lyric_trusted"]) if win and win["lyric_trusted"] is not None else None,
                 "lyric_confidence": win["lyric_confidence"] if win else None,

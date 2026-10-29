@@ -68,6 +68,31 @@ def test_status_search_feedback(tmp_path):
     assert client.get("/api/status").json()["feedback_marks"] == 1
 
 
+def test_taste_adjustments_follow_marks(tmp_path):
+    db_path = tmp_path / "library.db"
+    conn = dbmod.connect(db_path)
+    conn.execute(
+        "INSERT INTO judgements(query_id,anon_id,track_id,window_id,mark) VALUES('ui-x','W1',1,1,'usable')"
+    )
+    conn.execute(
+        "INSERT INTO judgements(query_id,anon_id,track_id,window_id,mark) VALUES('ui-x','W2',2,2,'wrong')"
+    )
+    conn.commit()
+    conn.close()
+    engine = SearchEngine(db_path=db_path)
+    engine._matrix = np.array([[1.0, 0.0, 0.0], [0.6, 0.8, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32)
+    engine._meta = [
+        {"window_id": 1, "track_id": 1},
+        {"window_id": 2, "track_id": 2},
+        {"window_id": 3, "track_id": 3},
+    ]
+    adj, used = engine._taste_adjustments()
+    assert used == 2
+    assert adj[0] > 0  # the usable window itself is boosted
+    assert adj[1] < 0  # the wrong window itself is pushed down
+    assert abs(adj[2]) < abs(adj[0])
+
+
 def test_track_file_serves_full_track_with_ranges(tmp_path):
     db_path = tmp_path / "library.db"
     song = tmp_path / "song.wav"
