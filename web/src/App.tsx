@@ -12,6 +12,7 @@ type Result = {
   sound_score?: number | null;
   word_score?: number | null;
   personal_adjustment?: number | null;
+  lyric_themes?: string[];
   lyric_text: string | null;
   lyric_trusted?: boolean | null;
   lyric_confidence?: number | null;
@@ -239,6 +240,9 @@ export default function App() {
                         <span className="badge">words</span>
                       )}
                       <span className="lyric-text">“{result.lyric_text}”</span>
+                      {result.lyric_themes && result.lyric_themes.length > 0 && (
+                        <span className="themes">likely themes: {result.lyric_themes.join(" · ")}</span>
+                      )}
                     </>
                   ) : (
                     "Words: none transcribed for this passage — sound only."

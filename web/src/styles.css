@@ -78,6 +78,7 @@ body {
 .badge.trusted { color: var(--good); border-color: var(--good); }
 .badge.low { color: var(--mid); border-color: var(--mid); }
 .lyric-text { color: var(--text); }
+.themes { color: var(--muted); font-style: italic; }
 
 .marks { display: grid; gap: 7px; }
 .mark {
