@@ -50,6 +50,9 @@ export default function App() {
   const [marks, setMarks] = useState<Record<number, Mark>>({});
   const [includeLyrics, setIncludeLyrics] = useState(false);
   const [searchedWithLyrics, setSearchedWithLyrics] = useState(false);
+  const [interpretation, setInterpretation] = useState("verbatim");
+  const [refiningId, setRefiningId] = useState<number | null>(null);
+  const [refined, setRefined] = useState<Record<number, { start: number; end: number; windows: number }>>({});
 
   useEffect(() => {
     fetch("/api/status")
@@ -65,17 +68,51 @@ export default function App() {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text, top: 5, include_lyrics: withLyrics }),
+        body: JSON.stringify({ query: text, top: 5, include_lyrics: withLyrics, interpretation }),
       });
-      if (!response.ok) throw new Error(`search failed (${response.status})`);
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new Error(detail?.detail || `search failed (${response.status})`);
+      }
       const data = await response.json();
       setResults(data.results);
       setSearchedQuery(data.query);
       setSearchedWithLyrics(Boolean(data.include_lyrics));
-    } catch {
-      setError("Search failed. The first search loads the model and can take a few seconds — try again.");
+      setRefined({});
+    } catch (err) {
+      setError(err instanceof Error && err.message.includes("API key")
+        ? err.message
+        : "Search failed. The first search loads the model and can take a few seconds — try again.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onRefine(result: Result, event: React.MouseEvent<HTMLButtonElement>) {
+    const button = event.currentTarget;
+    setRefiningId(result.window_id);
+    setError("");
+    try {
+      const response = await fetch("/api/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: searchedQuery, track_id: result.track_id }),
+      });
+      if (!response.ok) throw new Error(`refine failed (${response.status})`);
+      const data = await response.json();
+      setRefined((prev) => ({
+        ...prev,
+        [result.window_id]: { start: data.start_seconds, end: data.end_seconds, windows: data.windows_scanned },
+      }));
+      const audio = button.closest(".row")?.querySelector("audio");
+      if (audio) {
+        audio.currentTime = data.start_seconds;
+        void audio.play();
+      }
+    } catch {
+      setError("Dense scan failed for that track. The sparse passage above still stands.");
+    } finally {
+      setRefiningId(null);
     }
   }
 
@@ -146,6 +183,18 @@ export default function App() {
             Close the Music Discovery launcher window, start it again, then refresh this page.
           </p>
         )}
+        <label className="lyrics-toggle">
+          <span>Query wording</span>
+          <select
+            value={interpretation}
+            disabled={busy}
+            onChange={(e) => setInterpretation(e.target.value)}
+            aria-label="Query interpretation provider"
+          >
+            <option value="verbatim">Verbatim (local)</option>
+            <option value="meta">Meta Spark 1.3 (needs API key)</option>
+          </select>
+        </label>
         {error && <p className="error">{error}</p>}
         {busy && <p className="hint">First search warms up the model on your GPU. Later ones are quick.</p>}
 
@@ -167,8 +216,10 @@ export default function App() {
                 <div className="meta">
                   <span>{result.rel_path}</span>
                   <span>
-                    passage {fmt(result.start_seconds)}–{fmt(result.end_seconds)}
+                    passage {fmt(refined[result.window_id]?.start ?? result.start_seconds)}–
+                    {fmt(refined[result.window_id]?.end ?? result.end_seconds)}
                     {result.duration_seconds ? ` of ${fmt(result.duration_seconds)}` : ""}
+                    {refined[result.window_id] ? ` · dense scan of ${refined[result.window_id].windows}` : ""}
                   </span>
                   <span>match {result.score.toFixed(2)}</span>
                   {typeof result.sound_score === "number" && typeof result.word_score === "number" && (
@@ -221,6 +272,14 @@ export default function App() {
                     }}
                   >
                     Play from start
+                  </button>
+                  <button
+                    type="button"
+                    className="from-start"
+                    disabled={refiningId === result.window_id}
+                    onClick={(event) => void onRefine(result, event)}
+                  >
+                    {refiningId === result.window_id ? "Scanning track…" : "Find best passage"}
                   </button>
                 </div>
                 <div className="words">
