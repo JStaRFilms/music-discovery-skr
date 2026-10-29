@@ -58,6 +58,22 @@ class LocalProvider:
         raise NotImplementedError("Local model not configured yet")
 
 
+def get_provider(name: str, api_key: str | None = None) -> InterpretationProvider:
+    """Resolve a provider by the name the app sends.
+
+    'verbatim' is the offline control. 'meta' is the real Meta Spark
+    provider: selecting it without a key is an explicit error at call
+    time, never a silent fall back to verbatim.
+    """
+    if name in ("verbatim", "noop"):
+        return NoOpProvider()
+    if name == "meta":
+        return MetaSparkProvider(api_key=api_key)
+    if name == "local":
+        return LocalProvider()
+    raise ValueError(f"unknown interpretation provider: {name}")
+
+
 def query_hash(query: str) -> str:
     return hashlib.sha256(query.strip().lower().encode("utf-8")).hexdigest()
 

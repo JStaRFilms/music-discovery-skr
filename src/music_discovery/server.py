@@ -5,6 +5,8 @@ import mimetypes
 import subprocess
 from pathlib import Path
 
+import numpy as np
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -24,6 +26,7 @@ class SearchEngine:
         self._matrix = None
         self._meta = None
         self._dup_groups: dict[int, int] = {}
+        self._dense_cache: dict[int, object] = {}
         self._lyric_idx: list[int] | None = None
         self._lyric_vecs = None
         self._theme_vecs = None
@@ -69,12 +72,16 @@ class SearchEngine:
             adj += self.TASTE_WEIGHTS[mark] * sims.max(axis=1)
         return adj, sum(len(v) for v in by_mark.values())
 
-    def search(self, query: str, top: int = 5, include_lyrics: bool = False) -> list[dict]:
+    def search(self, query: str, top: int = 5, include_lyrics: bool = False,
+               descriptions: list[str] | None = None) -> list[dict]:
         from .embed import embed_texts
 
         self._load()
         model, processor, device = self._model
-        vec = embed_texts(model, processor, device, [query])[0]
+        texts = descriptions or [query]
+        vecs = embed_texts(model, processor, device, texts)
+        vec = vecs.mean(axis=0)
+        vec = vec / max(float(np.linalg.norm(vec)), 1e-12)
         adj, _used = self._taste_adjustments()
         if not include_lyrics:
             return rank_tracks(self._matrix, self._meta, vec, top, adjustments=adj, groups=self._dup_groups)
@@ -164,6 +171,41 @@ class SearchEngine:
         return list(best.values())
 
 
+    def refine_passage(self, query: str, track_id: int) -> dict:
+        """Dense-scan one track (10s windows, 5s hop) for its best passage.
+
+        On demand only: decoding and embedding a whole track takes seconds,
+        so results are cached per track for the life of the server.
+        """
+        from .embed import decode_window, embed_audio, embed_texts
+        from .windows import dense_windows
+
+        self._load()
+        conn = dbmod.connect(self.db_path)
+        track = conn.execute("SELECT path, duration_seconds FROM tracks WHERE id=?", (track_id,)).fetchone()
+        conn.close()
+        if track is None or not track["duration_seconds"]:
+            raise HTTPException(status_code=404, detail="track not found")
+        if track_id not in self._dense_cache:
+            wins = dense_windows(float(track["duration_seconds"]))
+            if len(wins) > 600:
+                raise HTTPException(status_code=422, detail="track too long for a dense scan")
+            model, processor, device = self._model
+            vecs = []
+            for i in range(0, len(wins), 4):
+                waves = [decode_window(Path(track["path"]), s, e - s) for s, e in wins[i:i + 4]]
+                vecs.append(embed_audio(model, processor, device, waves))
+            self._dense_cache[track_id] = (wins, np.vstack(vecs) if vecs else np.zeros((0, self._matrix.shape[1])))
+        wins, dense_vecs = self._dense_cache[track_id]
+        model, processor, device = self._model
+        qvec = embed_texts(model, processor, device, [query])[0]
+        scores = dense_vecs @ qvec
+        best = int(np.argmax(scores)) if len(scores) else 0
+        start, end = wins[best]
+        return {"track_id": track_id, "start_seconds": start, "end_seconds": end,
+                "score": float(scores[best]), "windows_scanned": len(wins)}
+
+
 class FeedbackIn(BaseModel):
     query_text: str
     track_id: int
@@ -178,6 +220,12 @@ class SearchIn(BaseModel):
     query: str
     top: int = 5
     include_lyrics: bool = False
+    interpretation: str = "verbatim"
+
+
+class RefineIn(BaseModel):
+    query: str
+    track_id: int
 
 
 def excerpt_path(window_id: int, db_path: Path) -> Path:
@@ -238,9 +286,31 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
             "audio_leaves_machine": False,
         }
 
+    @app.post("/api/refine")
+    def refine(body: RefineIn):
+        if not hasattr(engine, "refine_passage"):
+            raise HTTPException(status_code=501, detail="refine not available")
+        return engine.refine_passage(body.query.strip(), body.track_id)
+
     @app.post("/api/search")
     def search(body: SearchIn):
-        results = engine.search(body.query.strip(), body.top, include_lyrics=body.include_lyrics)
+        from .provider import get_provider, interpretation_to_json, query_hash
+
+        try:
+            provider = get_provider(body.interpretation)
+            interp = provider.interpret(body.query.strip())
+        except (RuntimeError, NotImplementedError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        conn0 = dbmod.connect(db_path)
+        conn0.execute(
+            "INSERT OR IGNORE INTO interpretations(query_hash,query_text,provider,model,payload_json) VALUES(?,?,?,?,?)",
+            (query_hash(body.query.strip()), body.query.strip(), interp.provider, interp.model,
+             interpretation_to_json(interp)),
+        )
+        conn0.commit()
+        conn0.close()
+        results = engine.search(body.query.strip(), body.top, include_lyrics=body.include_lyrics,
+                                descriptions=interp.descriptions)
         conn = dbmod.connect(db_path)
         out = []
         for r in results:
@@ -273,7 +343,8 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
             })
         conn.close()
         mode = "sound + trusted words (local)" if body.include_lyrics else "verbatim (local)"
-        return {"query": body.query, "interpretation": body.query, "provider": mode,
+        return {"query": body.query, "interpretation": " ".join(interp.descriptions), "provider": mode,
+                "interpretation_provider": interp.provider,
                 "include_lyrics": body.include_lyrics, "results": out}
 
     @app.get("/api/excerpt/{window_id}")

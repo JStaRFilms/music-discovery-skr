@@ -11,8 +11,9 @@ class FakeEngine:
     def __init__(self):
         self.calls = []
 
-    def search(self, query, top=5, include_lyrics=False):
-        self.calls.append({"query": query, "top": top, "include_lyrics": include_lyrics})
+    def search(self, query, top=5, include_lyrics=False, descriptions=None):
+        self.calls.append({"query": query, "top": top, "include_lyrics": include_lyrics,
+                           "descriptions": descriptions})
         result = {
             "track_id": 1, "window_id": 1, "path": "/x/song.wav", "rel_path": "song.wav",
             "start_seconds": 10.0, "end_seconds": 20.0, "score": 0.5,
@@ -20,6 +21,10 @@ class FakeEngine:
         if include_lyrics:
             result = {**result, "sound_score": 0.4, "word_score": 0.3}
         return [result]
+
+    def refine_passage(self, query, track_id):
+        return {"track_id": track_id, "start_seconds": 42.0, "end_seconds": 52.0,
+                "score": 0.9, "windows_scanned": 20}
 
 
 def _seed(db_path):
@@ -57,8 +62,17 @@ def test_status_search_feedback(tmp_path):
     with_lyrics = client.post("/api/search", json={"query": "love", "include_lyrics": True}).json()
     assert with_lyrics["include_lyrics"] is True
     assert engine.calls[-1]["include_lyrics"] is True
+    assert engine.calls[-1]["descriptions"] == ["love"]
     assert with_lyrics["results"][0]["sound_score"] == 0.4
     assert with_lyrics["results"][0]["word_score"] == 0.3
+
+    meta = client.post("/api/search", json={"query": "love", "interpretation": "meta"})
+    assert meta.status_code == 400
+    assert "API key" in meta.json()["detail"]
+
+    refined = client.post("/api/refine", json={"query": "happy", "track_id": 1}).json()
+    assert refined["start_seconds"] == 42.0
+    assert refined["windows_scanned"] == 20
 
     bad = client.post("/api/feedback", json={"query_text": "happy", "track_id": 1, "mark": "great"})
     assert bad.status_code == 422
