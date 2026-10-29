@@ -87,6 +87,12 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--all", action="store_true", help="transcribe every track, not just the sample")
 
+    p = sub.add_parser("duplicates")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
+    p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--threshold", type=float, default=0.995)
+
     p = sub.add_parser("lyrics-themes")
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
@@ -149,6 +155,19 @@ def main(argv: list[str] | None = None) -> None:
         from .lyrics import transcribe_vocals
 
         print(json.dumps(transcribe_vocals(args.db, args.threshold, selected_only=not args.all, limit=args.limit), indent=2))
+    elif args.cmd == "duplicates":
+        from .search import duplicate_groups as find_groups
+
+        matrix, meta = load_matrix(args.db, args.model, args.revision)
+        groups = find_groups(matrix, meta, args.threshold)
+        by_canonical: dict[int, list[str]] = {}
+        path_of = {}
+        for row in meta:
+            path_of.setdefault(row["track_id"], row["rel_path"])
+        for tid, canon in groups.items():
+            by_canonical.setdefault(canon, []).append(path_of.get(tid, str(tid)))
+        dup_groups = {str(c): sorted(ps) for c, ps in by_canonical.items() if len(ps) > 1}
+        print(json.dumps({"groups": len(dup_groups), "duplicate_groups": dup_groups}, indent=2))
     elif args.cmd == "lyrics-themes":
         from .lyrics import classify_lyric_themes
 

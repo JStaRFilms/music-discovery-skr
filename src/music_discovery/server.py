@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import config, db as dbmod
-from .search import load_matrix, rank_tracks
+from .search import duplicate_groups, load_matrix, rank_tracks
 
 EXCERPT_DIR = config.DATA_DIR / "cache" / "excerpts"
 
@@ -23,6 +23,7 @@ class SearchEngine:
         self._model = None
         self._matrix = None
         self._meta = None
+        self._dup_groups: dict[int, int] = {}
         self._lyric_idx: list[int] | None = None
         self._lyric_vecs = None
         self._theme_vecs = None
@@ -36,6 +37,7 @@ class SearchEngine:
         self._matrix, self._meta = load_matrix(
             self.db_path, config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION, kind="sparse"
         )
+        self._dup_groups = duplicate_groups(self._matrix, self._meta)
         model, processor, device = load_clap(config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION)
         self._model = (model, processor, device)
 
@@ -75,7 +77,7 @@ class SearchEngine:
         vec = embed_texts(model, processor, device, [query])[0]
         adj, _used = self._taste_adjustments()
         if not include_lyrics:
-            return rank_tracks(self._matrix, self._meta, vec, top, adjustments=adj)
+            return rank_tracks(self._matrix, self._meta, vec, top, adjustments=adj, groups=self._dup_groups)
         return self._search_with_lyrics(vec, top, adjustments=adj)
 
     def _trusted_lyric_vectors(self):
@@ -144,7 +146,8 @@ class SearchEngine:
         best: dict[int, dict] = {}
         for pos in order:
             row = self._meta[idx[int(pos)]]
-            if row["track_id"] not in best:
+            key = self._dup_groups.get(row["track_id"], row["track_id"])
+            if key not in best:
                 entry = {
                     **row,
                     "score": float(combined[int(pos)]),
@@ -155,7 +158,7 @@ class SearchEngine:
                     entry["personal_adjustment"] = float(adjustments[idx[int(pos)]])
                 if theme_match is not None:
                     entry["theme_score"] = float(theme_match[int(pos)])
-                best[row["track_id"]] = entry
+                best[key] = entry
             if len(best) >= top:
                 break
         return list(best.values())
