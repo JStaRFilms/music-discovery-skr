@@ -75,11 +75,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
     p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
+    p.add_argument("--all", action="store_true", help="score every track, not just the sample")
 
     p = sub.add_parser("lyrics-transcribe")
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--all", action="store_true", help="transcribe every track, not just the sample")
 
     p = sub.add_parser("check-model")
     p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
@@ -129,11 +131,11 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "lyrics-detect":
         from .lyrics import detect_vocals
 
-        print(json.dumps(detect_vocals(args.db, args.model, args.revision), indent=2))
+        print(json.dumps(detect_vocals(args.db, args.model, args.revision, selected_only=not args.all), indent=2))
     elif args.cmd == "lyrics-transcribe":
         from .lyrics import transcribe_vocals
 
-        print(json.dumps(transcribe_vocals(args.db, args.threshold, limit=args.limit), indent=2))
+        print(json.dumps(transcribe_vocals(args.db, args.threshold, selected_only=not args.all, limit=args.limit), indent=2))
     elif args.cmd == "check-model":
         result = check_model(args.model, args.revision)
         print(json.dumps(result, indent=2))

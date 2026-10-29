@@ -168,6 +168,7 @@ def transcribe_vocals(db_path: Path, threshold: float = 0.5, selected_only: bool
                 )
                 conn.commit()
                 done += 1
+                __import__("time").sleep(0.7)
             except Exception as exc:  # per-window failure is recorded, never fatal to the batch
                 conn.execute("UPDATE windows SET lyric_source=? WHERE id=?", (f"groq:error:{str(exc)[:120]}", row["window_id"]))
                 conn.commit()
