@@ -19,7 +19,7 @@ body {
   font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
 }
 
-.page { min-height: 100vh; display: flex; flex-direction: column; }
+.page { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 52px; }
 
 .topbar {
   position: sticky; top: 0; z-index: 10; background: var(--bg);
@@ -69,7 +69,10 @@ body {
 .mark.active.close { background: var(--mid); border-color: var(--mid); color: #171204; font-weight: 650; }
 .mark.active.wrong { background: var(--bad); border-color: var(--bad); color: #180806; font-weight: 650; }
 
-.footer { padding: 16px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.footer {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--bg);
+  padding: 14px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px;
+}
 
 @media (max-width: 640px) {
   .row { grid-template-columns: 22px 1fr; }
