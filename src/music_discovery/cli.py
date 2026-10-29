@@ -67,6 +67,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--judgements", type=Path, default=Path("experiments/blind_pack/judgements.csv"))
 
+    p = sub.add_parser("lyrics-review")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--out", type=Path, default=Path("experiments/lyrics_review"))
+
     p = sub.add_parser("lyrics-detect")
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
@@ -118,6 +122,10 @@ def main(argv: list[str] | None = None) -> None:
             print(json.dumps(make_blind_pack(args.db, by_query, args.out), indent=2))
     elif args.cmd == "scorecard":
         print(json.dumps(scorecard(args.db, args.judgements), indent=2))
+    elif args.cmd == "lyrics-review":
+        from .review import make_lyrics_review
+
+        print(json.dumps(make_lyrics_review(args.db, args.out), indent=2))
     elif args.cmd == "lyrics-detect":
         from .lyrics import detect_vocals
 
