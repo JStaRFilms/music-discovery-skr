@@ -5,6 +5,7 @@ import math
 import os
 import subprocess
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -109,7 +110,6 @@ def groq_transcribe_file(path: Path, api_key: str, model: str = GROQ_MODEL) -> d
         method="POST",
     )
     import time
-    import urllib.error
 
     for attempt in range(3):
         try:
