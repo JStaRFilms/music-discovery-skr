@@ -1,16 +1,16 @@
 query_id,query_text,tier,anon_id,excerpt,mark,timestamp_ok,failure_class,notes
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L001,excerpts/L001.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L002,excerpts/L002.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L003,excerpts/L003.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L004,excerpts/L004.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L005,excerpts/L005.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L006,excerpts/L006.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L007,excerpts/L007.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L008,excerpts/L008.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L009,excerpts/L009.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L010,excerpts/L010.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L011,excerpts/L011.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L012,excerpts/L012.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L013,excerpts/L013.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L014,excerpts/L014.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L015,excerpts/L015.wav,,,,
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L001,excerpts/L001.wav,close,,,I think the only comment I have is the fact that it has vocals on top of it. But it's actually fast-paced and upbeat.
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L002,excerpts/L002.wav,usable,,,
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L003,excerpts/L003.wav,usable,,,
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L004,excerpts/L004.wav,usable,,,Same song as the first one.
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L005,excerpts/L005.wav,usable,,,
+t4v2-happy-sad,happy words over a sad sound,4,L006,excerpts/L006.wav,usable,,,
+t4v2-happy-sad,happy words over a sad sound,4,L007,excerpts/L007.wav,usable,,,
+t4v2-happy-sad,happy words over a sad sound,4,L008,excerpts/L008.wav,usable,,,
+t4v2-happy-sad,happy words over a sad sound,4,L009,excerpts/L009.wav,usable,,,
+t4v2-happy-sad,happy words over a sad sound,4,L010,excerpts/L010.wav,usable,,,
+t4v2-love-calm,love words over a calm sound,4,L011,excerpts/L011.wav,usable,,,"This section looked like it didn't have any words, sir."
+t4v2-love-calm,love words over a calm sound,4,L012,excerpts/L012.wav,usable,,,This one too didn't have any words.
+t4v2-love-calm,love words over a calm sound,4,L013,excerpts/L013.wav,usable,,,This one too didn't have any words.
+t4v2-love-calm,love words over a calm sound,4,L014,excerpts/L014.wav,usable,,,This one too didn't have any words.
+t4v2-love-calm,love words over a calm sound,4,L015,excerpts/L015.wav,usable,,," I'm guessing maybe other parts of the song have vocals, but this part doesn't have any vocals. "
