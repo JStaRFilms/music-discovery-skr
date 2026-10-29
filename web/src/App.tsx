@@ -9,11 +9,11 @@ type Result = {
   end_seconds: number;
   duration_seconds: number | null;
   score: number;
-  sound_score: number | null;
-  word_score: number | null;
+  sound_score?: number | null;
+  word_score?: number | null;
   lyric_text: string | null;
-  lyric_trusted: boolean | null;
-  lyric_confidence: number | null;
+  lyric_trusted?: boolean | null;
+  lyric_confidence?: number | null;
   vocal_prob: number | null;
   excerpt_url: string;
 };
@@ -137,6 +137,12 @@ export default function App() {
             </span>
           </span>
         </label>
+        {status && typeof status.lyric_windows_trusted !== "number" && (
+          <p className="error">
+            This page is talking to an older server build, so the lyrics toggle cannot work yet.
+            Close the Music Discovery launcher window, start it again, then refresh this page.
+          </p>
+        )}
         {error && <p className="error">{error}</p>}
         {busy && <p className="hint">First search warms up the model on your GPU. Later ones are quick.</p>}
 
@@ -181,11 +187,19 @@ export default function App() {
                 <div className="words">
                   {result.lyric_text ? (
                     <>
-                      <span className={result.lyric_trusted ? "badge trusted" : "badge low"}>
-                        {result.lyric_trusted
-                          ? `trusted words${result.lyric_confidence !== null ? ` · ${Math.round(result.lyric_confidence * 100)}%` : ""}`
-                          : `low-trust words${result.lyric_confidence !== null ? ` · ${Math.round(result.lyric_confidence * 100)}%` : ""}`}
-                      </span>
+                      {result.lyric_trusted === true ? (
+                        <span className="badge trusted">
+                          trusted words
+                          {typeof result.lyric_confidence === "number" ? ` · ${Math.round(result.lyric_confidence * 100)}%` : ""}
+                        </span>
+                      ) : result.lyric_trusted === false ? (
+                        <span className="badge low">
+                          low-trust words
+                          {typeof result.lyric_confidence === "number" ? ` · ${Math.round(result.lyric_confidence * 100)}%` : ""}
+                        </span>
+                      ) : (
+                        <span className="badge">words</span>
+                      )}
                       <span className="lyric-text">“{result.lyric_text}”</span>
                     </>
                   ) : (
