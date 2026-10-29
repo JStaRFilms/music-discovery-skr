@@ -11,6 +11,7 @@ type Result = {
   score: number;
   sound_score?: number | null;
   word_score?: number | null;
+  personal_adjustment?: number | null;
   lyric_text: string | null;
   lyric_trusted?: boolean | null;
   lyric_confidence?: number | null;
@@ -172,6 +173,12 @@ export default function App() {
                   {typeof result.sound_score === "number" && typeof result.word_score === "number" && (
                     <span>
                       sound {result.sound_score.toFixed(2)} · words {result.word_score.toFixed(2)}
+                    </span>
+                  )}
+                  {typeof result.personal_adjustment === "number" && Math.abs(result.personal_adjustment) >= 0.01 && (
+                    <span className={result.personal_adjustment > 0 ? "taste up" : "taste down"}>
+                      your taste {result.personal_adjustment > 0 ? "+" : ""}
+                      {result.personal_adjustment.toFixed(2)}
                     </span>
                   )}
                 </div>
