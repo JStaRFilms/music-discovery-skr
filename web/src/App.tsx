@@ -131,7 +131,16 @@ export default function App() {
                   </span>
                   <span>match {result.score.toFixed(2)}</span>
                 </div>
-                <audio controls preload="none" src={result.excerpt_url} />
+                <audio
+                  controls
+                  preload="none"
+                  src={result.excerpt_url}
+                  onPlay={(event) => {
+                    document.querySelectorAll("audio").forEach((other) => {
+                      if (other !== event.currentTarget) other.pause();
+                    });
+                  }}
+                />
                 <div className="words">
                   {result.lyric_text
                     ? `Words: ${result.lyric_text}`
