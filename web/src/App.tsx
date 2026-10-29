@@ -200,7 +200,21 @@ export default function App() {
                     });
                   }}
                 />
-                <div className="player-note">Full track — starts at the matched passage. Scrub to hear the rest.</div>
+                <div className="player-note">
+                  <span>Full track — starts at the matched passage. Scrub to hear the rest.</span>
+                  <button
+                    type="button"
+                    className="from-start"
+                    onClick={(event) => {
+                      const audio = event.currentTarget.closest(".row")?.querySelector("audio");
+                      if (!audio) return;
+                      audio.currentTime = 0;
+                      void audio.play();
+                    }}
+                  >
+                    Play from start
+                  </button>
+                </div>
                 <div className="words">
                   {result.lyric_text ? (
                     <>
