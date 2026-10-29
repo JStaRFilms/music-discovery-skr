@@ -25,7 +25,7 @@ type Status = {
   tracks_total: number;
   sparse_windows: number;
   feedback_marks: number;
-  lyric_windows_trusted: number;
+  lyric_windows_trusted?: number;
 };
 
 const MARKS = ["usable", "close", "wrong"] as const;
@@ -131,7 +131,7 @@ export default function App() {
           <span>
             Include lyrics in search
             <span className="toggle-note">
-              {status
+              {typeof status?.lyric_windows_trusted === "number"
                 ? ` — matches sung words too, over ${status.lyric_windows_trusted.toLocaleString()} trusted passages only`
                 : " — matches sung words too, trusted passages only"}
             </span>
@@ -162,7 +162,7 @@ export default function App() {
                     {result.duration_seconds ? ` of ${fmt(result.duration_seconds)}` : ""}
                   </span>
                   <span>match {result.score.toFixed(2)}</span>
-                  {result.sound_score !== null && result.word_score !== null && (
+                  {typeof result.sound_score === "number" && typeof result.word_score === "number" && (
                     <span>
                       sound {result.sound_score.toFixed(2)} · words {result.word_score.toFixed(2)}
                     </span>
