@@ -63,6 +63,10 @@ def classify_trust(text: str, confidence: float | None, no_speech_prob: float | 
     cleaned = " ".join((text or "").strip().lower().strip(".! ").split())
     if not cleaned or cleaned in KNOWN_ARTIFACTS:
         return False
+    # A one- or two-word fragment ("so", "oh") cannot support lyric search;
+    # John's Tier 4 v2 judging showed such fragments pass as false lyrics.
+    if len(cleaned.split()) < 3:
+        return False
     if no_speech_prob is not None and no_speech_prob >= 0.6:
         return False
     if confidence is not None and confidence < 0.5:
