@@ -1,16 +1,16 @@
 query_id,query_text,tier,anon_id,excerpt,mark,timestamp_ok,failure_class,notes
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L001,excerpts/L001.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L002,excerpts/L002.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L003,excerpts/L003.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L004,excerpts/L004.wav,,,,
-t4v2-sad-upbeat,sad words over an upbeat sound,4,L005,excerpts/L005.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L006,excerpts/L006.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L007,excerpts/L007.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L008,excerpts/L008.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L009,excerpts/L009.wav,,,,
-t4v2-happy-sad,happy words over a sad sound,4,L010,excerpts/L010.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L011,excerpts/L011.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L012,excerpts/L012.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L013,excerpts/L013.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L014,excerpts/L014.wav,,,,
-t4v2-love-calm,love words over a calm sound,4,L015,excerpts/L015.wav,,,,
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L001,excerpts/L001.wav,usable,,,
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L002,excerpts/L002.wav,usable,,,I like this song lmao 
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L003,excerpts/L003.wav,usable,,,"I wouldn't exactly call this a sad lyric, but it's upbeat."
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L004,excerpts/L004.wav,usable,,,"I mean, fair enough."
+t4v2-sad-upbeat,sad words over an upbeat sound,4,L005,excerpts/L005.wav,usable,,,"Yeah, I guess Samsung has first to, but yeah, sure."
+t4v2-happy-sad,happy words over a sad sound,4,L006,excerpts/L006.wav,usable,,,"I really didn't know what they said, but I guess he might be happy."
+t4v2-happy-sad,happy words over a sad sound,4,L007,excerpts/L007.wav,usable,,,yeah
+t4v2-happy-sad,happy words over a sad sound,4,L008,excerpts/L008.wav,usable,,,Yeah perfect it was litterally happy birthday song lmao 
+t4v2-happy-sad,happy words over a sad sound,4,L009,excerpts/L009.wav,usable,,,hmm yeah sure
+t4v2-happy-sad,happy words over a sad sound,4,L010,excerpts/L010.wav,usable,,,"yeah cool The lyrics are inside the help you enter. Just normal lyrics, but that's good."
+t4v2-love-calm,love words over a calm sound,4,L011,excerpts/L011.wav,usable,,,yeah I guess
+t4v2-love-calm,love words over a calm sound,4,L012,excerpts/L012.wav,usable,,,"I mean, fair enough, sure."
+t4v2-love-calm,love words over a calm sound,4,L013,excerpts/L013.wav,usable,,,"Yeah, this is some SZA. I think that makes sense."
+t4v2-love-calm,love words over a calm sound,4,L014,excerpts/L014.wav,usable,,,yeahhh valid
+t4v2-love-calm,love words over a calm sound,4,L015,excerpts/L015.wav,usable,,,makes sense shaa

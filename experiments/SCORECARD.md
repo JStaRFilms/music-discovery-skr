@@ -15,7 +15,7 @@ Precision@5 and timestamp hit rate come from John's marks in
 | 2026-10-29 | primary, dense vs sparse | 1–4 | unjudged | unjudged | 6.08 dense | GTX 1650 CUDA | mean top-5 overlap 3.4/5 |
 | 2026-10-29 | primary, full library | all | n/a | n/a | 5.50 | GTX 1650 CUDA | 1,548 tracks, 7,524 sparse windows |
 | 2026-10-29 | primary + Groq Whisper lyrics | 4 v2 | 0.93 marks (14/15); 0.60 words-verified (9/15) | not scored | n/a | GTX 1650 + Groq | Love-calm 0/5 on words: one-word "so" transcripts passed trust. Sad-upbeat 4/5+1 close, happy-sad 5/5 |
-| 2026-10-29 | primary + Groq Whisper lyrics, 3-word trust fix | 4 v3 | pack generated, unjudged | not scored | n/a | GTX 1650 + Groq | Trusted re-filtered 424→261 windows (100 tracks); 15 clips, 13 distinct tracks, all 4+ word transcripts |
+| 2026-10-29 | primary + Groq Whisper lyrics, 3-word trust fix | 4 v3 | 1.00 (15/15) | not scored | n/a | GTX 1650 + Groq | All queries 5/5; no "no words" notes. Transcript-theme audit: 5 clear, 4 adjacent, 6 absent — word-mood ranking still blunt |
 | | `laion/clap-htsat-fused` (`365dea6e…`) | 1–4 | | | | | comparator |
 | | CLaMP 3 (`sander-wood/clamp3`) | 1–4 | | | | | experiment-only license |
 
