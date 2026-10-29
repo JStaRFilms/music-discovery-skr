@@ -77,11 +77,25 @@ def groq_transcribe_file(path: Path, api_key: str, model: str = GROQ_MODEL) -> d
     request = urllib.request.Request(
         GROQ_URL,
         data=bytes(body),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": f"multipart/form-data; boundary={boundary}"},
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            # Groq's edge rejects the default Python-urllib agent (error 1010).
+            "User-Agent": "music-discovery/0.1",
+        },
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=120) as response:
-        return parse_transcription(json.loads(response.read().decode("utf-8")))
+    import time
+    import urllib.error
+
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                return parse_transcription(json.loads(response.read().decode("utf-8")))
+        except urllib.error.HTTPError as exc:
+            if exc.code != 429 or attempt == 2:
+                raise
+            time.sleep(10 * (attempt + 1))
 
 
 def extract_excerpt(track_path: Path, start: float, end: float, out: Path) -> Path:
@@ -93,11 +107,20 @@ def extract_excerpt(track_path: Path, start: float, end: float, out: Path) -> Pa
     return out
 
 
+def sync_lyrics_fts(conn) -> None:
+    conn.execute("DELETE FROM lyrics_fts")
+    conn.execute(
+        "INSERT INTO lyrics_fts(window_id, lyric_text) SELECT id, lyric_text FROM windows WHERE lyric_text IS NOT NULL AND lyric_text != ''"
+    )
+    conn.commit()
+
+
 def transcribe_vocals(db_path: Path, threshold: float = 0.5, selected_only: bool = True, limit: int | None = None) -> dict:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY is not set in this process environment")
     conn = dbmod.connect(db_path)
+    sync_lyrics_fts(conn)
     selected_sql = "AND t.selected=1" if selected_only else ""
     rows = conn.execute(
         f"""SELECT w.id window_id, w.start_seconds, w.end_seconds, t.path
@@ -125,6 +148,7 @@ def transcribe_vocals(db_path: Path, threshold: float = 0.5, selected_only: bool
                 conn.execute("UPDATE windows SET lyric_source=? WHERE id=?", (f"groq:error:{str(exc)[:120]}", row["window_id"]))
                 conn.commit()
                 errors += 1
+    sync_lyrics_fts(conn)
     total = conn.execute("SELECT COUNT(*) c FROM windows WHERE lyric_text IS NOT NULL AND lyric_text != ''").fetchone()["c"]
     conn.close()
     return {"attempted": len(rows), "transcribed": done, "errors": errors, "windows_with_lyrics": total}
