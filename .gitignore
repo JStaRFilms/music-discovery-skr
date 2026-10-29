@@ -38,3 +38,4 @@ data/
 experiments/**/excerpts/
 experiments/**/mapping.json
 experiments/lyrics_review/
+*.tsbuildinfo
