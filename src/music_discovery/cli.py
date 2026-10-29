@@ -67,6 +67,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--judgements", type=Path, default=Path("experiments/blind_pack/judgements.csv"))
 
+    p = sub.add_parser("tier4-pack")
+    p.add_argument("--db", type=Path, default=config.DB_PATH)
+    p.add_argument("--out", type=Path, default=Path("experiments/blind_pack_tier4v2"))
+
     p = sub.add_parser("lyrics-review")
     p.add_argument("--db", type=Path, default=config.DB_PATH)
     p.add_argument("--out", type=Path, default=Path("experiments/lyrics_review"))
@@ -124,6 +128,10 @@ def main(argv: list[str] | None = None) -> None:
             print(json.dumps(make_blind_pack(args.db, by_query, args.out), indent=2))
     elif args.cmd == "scorecard":
         print(json.dumps(scorecard(args.db, args.judgements), indent=2))
+    elif args.cmd == "tier4-pack":
+        from .lyric_search import make_tier4_pack
+
+        print(json.dumps(make_tier4_pack(args.db, args.out), indent=2))
     elif args.cmd == "lyrics-review":
         from .review import make_lyrics_review
 
