@@ -22,6 +22,8 @@ class SearchEngine:
         self._model = None
         self._matrix = None
         self._meta = None
+        self._lyric_idx: list[int] | None = None
+        self._lyric_vecs = None
 
     def _load(self):
         if self._matrix is not None:
@@ -38,13 +40,68 @@ class SearchEngine:
     def device(self) -> str:
         return self._model[2] if self._model else "not loaded"
 
-    def search(self, query: str, top: int = 5) -> list[dict]:
+    def search(self, query: str, top: int = 5, include_lyrics: bool = False) -> list[dict]:
         from .embed import embed_texts
 
         self._load()
         model, processor, device = self._model
         vec = embed_texts(model, processor, device, [query])[0]
-        return rank_tracks(self._matrix, self._meta, vec, top)
+        if not include_lyrics:
+            return rank_tracks(self._matrix, self._meta, vec, top)
+        return self._search_with_lyrics(vec, top)
+
+    def _trusted_lyric_vectors(self):
+        """CLAP text vectors for trusted lyric windows, embedded once and cached."""
+        if self._lyric_vecs is not None:
+            return self._lyric_idx, self._lyric_vecs
+        from .embed import embed_texts
+
+        conn = dbmod.connect(self.db_path)
+        trusted = {
+            r["window_id"]: r["lyric_text"]
+            for r in conn.execute(
+                "SELECT w.id window_id, w.lyric_text FROM windows w "
+                "WHERE w.lyric_trusted=1 AND w.lyric_text IS NOT NULL AND w.lyric_text != ''"
+            ).fetchall()
+        }
+        conn.close()
+        model, processor, device = self._model
+        self._lyric_idx = [i for i, row in enumerate(self._meta) if row["window_id"] in trusted]
+        texts = [trusted[self._meta[i]["window_id"]][:300] for i in self._lyric_idx]
+        vecs = []
+        for start in range(0, len(texts), 64):
+            vecs.append(embed_texts(model, processor, device, texts[start:start + 64]))
+        import numpy as np
+
+        self._lyric_vecs = np.vstack(vecs) if vecs else np.zeros((0, self._matrix.shape[1]), dtype=np.float32)
+        return self._lyric_idx, self._lyric_vecs
+
+    def _search_with_lyrics(self, vec, top: int) -> list[dict]:
+        """Rank trusted-lyric windows by sound and words together (Tier 4 v3 method)."""
+        import numpy as np
+
+        from .lyric_search import _minmax
+
+        idx, lyric_vecs = self._trusted_lyric_vectors()
+        if not idx:
+            return []
+        sound = self._matrix[idx] @ vec
+        words = lyric_vecs @ vec
+        combined = _minmax(sound) + _minmax(words)
+        order = np.argsort(-combined)
+        best: dict[int, dict] = {}
+        for pos in order:
+            row = self._meta[idx[int(pos)]]
+            if row["track_id"] not in best:
+                best[row["track_id"]] = {
+                    **row,
+                    "score": float(combined[int(pos)]),
+                    "sound_score": float(sound[int(pos)]),
+                    "word_score": float(words[int(pos)]),
+                }
+            if len(best) >= top:
+                break
+        return list(best.values())
 
 
 class FeedbackIn(BaseModel):
@@ -60,6 +117,7 @@ class FeedbackIn(BaseModel):
 class SearchIn(BaseModel):
     query: str
     top: int = 5
+    include_lyrics: bool = False
 
 
 def excerpt_path(window_id: int, db_path: Path) -> Path:
@@ -105,6 +163,9 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
             (config.PRIMARY_MODEL_ID,),
         ).fetchone()["c"]
         feedback = conn.execute("SELECT COUNT(*) c FROM judgements WHERE mark IS NOT NULL AND mark != ''").fetchone()["c"]
+        lyric_windows = conn.execute(
+            "SELECT COUNT(*) c FROM windows WHERE lyric_trusted=1 AND lyric_text IS NOT NULL AND lyric_text != ''"
+        ).fetchone()["c"]
         conn.close()
         return {
             "model": config.PRIMARY_MODEL_ID,
@@ -113,17 +174,18 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
             "tracks_total": tracks,
             "sparse_windows": windows,
             "feedback_marks": feedback,
+            "lyric_windows_trusted": lyric_windows,
             "audio_leaves_machine": False,
         }
 
     @app.post("/api/search")
     def search(body: SearchIn):
-        results = engine.search(body.query.strip(), body.top)
+        results = engine.search(body.query.strip(), body.top, include_lyrics=body.include_lyrics)
         conn = dbmod.connect(db_path)
         out = []
         for r in results:
             win = conn.execute(
-                "SELECT lyric_text, vocal_prob FROM windows WHERE id=?", (r["window_id"],)
+                "SELECT lyric_text, lyric_trusted, lyric_confidence, vocal_prob FROM windows WHERE id=?", (r["window_id"],)
             ).fetchone()
             track = conn.execute(
                 "SELECT duration_seconds FROM tracks WHERE id=?", (r["track_id"],)
@@ -137,12 +199,18 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
                 "end_seconds": r["end_seconds"],
                 "duration_seconds": track["duration_seconds"] if track else None,
                 "score": r["score"],
+                "sound_score": r.get("sound_score"),
+                "word_score": r.get("word_score"),
                 "lyric_text": win["lyric_text"] if win else None,
+                "lyric_trusted": bool(win["lyric_trusted"]) if win and win["lyric_trusted"] is not None else None,
+                "lyric_confidence": win["lyric_confidence"] if win else None,
                 "vocal_prob": win["vocal_prob"] if win else None,
                 "excerpt_url": f"/api/excerpt/{r['window_id']}",
             })
         conn.close()
-        return {"query": body.query, "interpretation": body.query, "provider": "verbatim (local)", "results": out}
+        mode = "sound + trusted words (local)" if body.include_lyrics else "verbatim (local)"
+        return {"query": body.query, "interpretation": body.query, "provider": mode,
+                "include_lyrics": body.include_lyrics, "results": out}
 
     @app.get("/api/excerpt/{window_id}")
     def excerpt(window_id: int):
