@@ -48,6 +48,7 @@ def test_status_search_feedback(tmp_path):
     found = client.post("/api/search", json={"query": "happy"}).json()
     assert found["results"][0]["file_name"] == "song.wav"
     assert found["results"][0]["excerpt_url"] == "/api/excerpt/1"
+    assert found["results"][0]["track_url"] == "/api/track/1"
     assert found["results"][0]["lyric_trusted"] is True
     assert found["results"][0]["lyric_confidence"] == 0.79
     assert found["include_lyrics"] is False
@@ -65,6 +66,30 @@ def test_status_search_feedback(tmp_path):
     ok = client.post("/api/feedback", json={"query_text": "happy", "track_id": 1, "window_id": 1, "mark": "usable"})
     assert ok.json() == {"ok": True}
     assert client.get("/api/status").json()["feedback_marks"] == 1
+
+
+def test_track_file_serves_full_track_with_ranges(tmp_path):
+    db_path = tmp_path / "library.db"
+    song = tmp_path / "song.wav"
+    song.write_bytes(b"0123456789abcdef")
+    conn = dbmod.connect(db_path)
+    conn.execute(
+        "INSERT INTO tracks(id,collection,path,rel_path,source_folder,size_bytes,mtime,duration_seconds,status) VALUES(1,'music',?,'song.wav','(root)',16,0,100,'ok')",
+        (str(song),),
+    )
+    conn.commit()
+    conn.close()
+    client = TestClient(create_app(engine=FakeEngine(), db_path=db_path))
+
+    full = client.get("/api/track/1")
+    assert full.status_code == 200
+    assert full.content == b"0123456789abcdef"
+
+    ranged = client.get("/api/track/1", headers={"Range": "bytes=4-7"})
+    assert ranged.status_code == 206
+    assert ranged.content == b"4567"
+
+    assert client.get("/api/track/99").status_code == 404
 
 
 def test_lyric_search_ranks_on_sound_and_words(tmp_path):

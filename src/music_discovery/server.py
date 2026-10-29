@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import mimetypes
 import subprocess
 from pathlib import Path
 
@@ -206,6 +207,7 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
                 "lyric_confidence": win["lyric_confidence"] if win else None,
                 "vocal_prob": win["vocal_prob"] if win else None,
                 "excerpt_url": f"/api/excerpt/{r['window_id']}",
+                "track_url": f"/api/track/{r['track_id']}",
             })
         conn.close()
         mode = "sound + trusted words (local)" if body.include_lyrics else "verbatim (local)"
@@ -215,6 +217,18 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
     @app.get("/api/excerpt/{window_id}")
     def excerpt(window_id: int):
         return FileResponse(excerpt_path(window_id, db_path), media_type="audio/wav")
+
+    @app.get("/api/track/{track_id}")
+    def track_file(track_id: int):
+        conn = dbmod.connect(db_path)
+        row = conn.execute("SELECT path FROM tracks WHERE id=?", (track_id,)).fetchone()
+        conn.close()
+        if row is None or not Path(row["path"]).exists():
+            raise HTTPException(status_code=404, detail="track not found")
+        # FileResponse answers Range requests, so the browser can seek and
+        # start mid-track at the matched passage.
+        media = mimetypes.guess_type(row["path"])[0] or "application/octet-stream"
+        return FileResponse(row["path"], media_type=media)
 
     @app.post("/api/feedback")
     def feedback(body: FeedbackIn):
