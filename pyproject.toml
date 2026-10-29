@@ -17,6 +17,10 @@ embed = [
 lyrics = [
     "faster-whisper>=1.0",
 ]
+app = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
 dev = [
     "pytest>=8.0",
 ]
