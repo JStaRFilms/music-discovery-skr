@@ -11,6 +11,9 @@ Precision@5 and timestamp hit rate come from John's marks in
 | 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 2 emotional | pending judging | pending | 6.15 | GTX 1650 CUDA | blind_pack_run2, 75 excerpts |
 | 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 3 temporal | pending judging | pending | 6.15 | GTX 1650 CUDA | sparse windows only |
 | 2026-10-27 run 2 | `laion/larger_clap_music_and_speech` (`195c3a3e…`) | 4 lyric vs sound | pending judging | pending | 6.15 | GTX 1650 CUDA | lyrics not yet transcribed |
+| 2026-10-29 | `laion/clap-htsat-fused` (`365dea6e…`) | 1–4 | sealed, unjudged | sealed | 6.68 | GTX 1650 CUDA | comparator pack generated, 31 distinct tracks |
+| 2026-10-29 | primary, dense vs sparse | 1–4 | unjudged | unjudged | 6.08 dense | GTX 1650 CUDA | mean top-5 overlap 3.4/5 |
+| 2026-10-29 | primary, full library | all | n/a | n/a | 5.50 | GTX 1650 CUDA | 1,548 tracks, 7,524 sparse windows |
 | | `laion/clap-htsat-fused` (`365dea6e…`) | 1–4 | | | | | comparator |
 | | CLaMP 3 (`sander-wood/clamp3`) | 1–4 | | | | | experiment-only license |
 
