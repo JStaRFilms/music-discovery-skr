@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "data"
+# Packaged installs set MUSIC_DISCOVERY_DATA to a writable per-user folder
+# (e.g. %LOCALAPPDATA%\MusicDiscovery) so the index survives reinstalls.
+DATA_DIR = Path(os.environ.get("MUSIC_DISCOVERY_DATA", PROJECT_ROOT / "data"))
 INDEX_DIR = DATA_DIR / "index"
 DB_PATH = INDEX_DIR / "library.db"
 MANIFEST_DIR = INDEX_DIR / "manifests"

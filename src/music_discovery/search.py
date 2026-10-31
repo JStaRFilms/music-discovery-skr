@@ -66,7 +66,7 @@ def duplicate_groups(matrix: np.ndarray, meta: list[dict], threshold: float = 0.
     return {t: find(t) for t in order}
 
 
-def rank_tracks(matrix: np.ndarray, meta: list[dict], query_vec: np.ndarray, top_tracks: int = 5,
+def rank_tracks(matrix: np.ndarray, meta: list[dict], query_vec: np.ndarray, top_tracks: int = 20,
                 adjustments: np.ndarray | None = None, groups: dict[int, int] | None = None) -> list[dict]:
     scores = matrix @ query_vec
     if adjustments is not None:

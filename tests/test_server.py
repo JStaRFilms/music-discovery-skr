@@ -11,7 +11,7 @@ class FakeEngine:
     def __init__(self):
         self.calls = []
 
-    def search(self, query, top=5, include_lyrics=False, descriptions=None):
+    def search(self, query, top=20, include_lyrics=False, descriptions=None):
         self.calls.append({"query": query, "top": top, "include_lyrics": include_lyrics,
                            "descriptions": descriptions})
         result = {
@@ -58,6 +58,10 @@ def test_status_search_feedback(tmp_path):
     assert found["results"][0]["lyric_confidence"] == 0.79
     assert found["include_lyrics"] is False
     assert engine.calls[-1]["include_lyrics"] is False
+    assert engine.calls[-1]["top"] == 20
+
+    assert client.post("/api/search", json={"query": "happy", "top": 51}).status_code == 422
+    assert client.post("/api/search", json={"query": "happy", "top": 0}).status_code == 422
 
     with_lyrics = client.post("/api/search", json={"query": "love", "include_lyrics": True}).json()
     assert with_lyrics["include_lyrics"] is True
@@ -80,6 +84,15 @@ def test_status_search_feedback(tmp_path):
     ok = client.post("/api/feedback", json={"query_text": "happy", "track_id": 1, "window_id": 1, "mark": "usable"})
     assert ok.json() == {"ok": True}
     assert client.get("/api/status").json()["feedback_marks"] == 1
+
+
+def test_setup_index_validates_folder(tmp_path):
+    db_path = tmp_path / "library.db"
+    _seed(db_path)
+    client = TestClient(create_app(engine=FakeEngine(), db_path=db_path))
+    assert client.get("/api/setup/status").json()["state"] == "idle"
+    bad = client.post("/api/setup/index", json={"root": str(tmp_path / "nope")})
+    assert bad.status_code == 400
 
 
 def test_taste_adjustments_follow_marks(tmp_path):

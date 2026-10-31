@@ -51,6 +51,9 @@ export default function App() {
   const [includeLyrics, setIncludeLyrics] = useState(false);
   const [searchedWithLyrics, setSearchedWithLyrics] = useState(false);
   const [interpretation, setInterpretation] = useState("verbatim");
+  const [limit, setLimit] = useState(20);
+  const [musicFolder, setMusicFolder] = useState("");
+  const [setup, setSetup] = useState<{ state: string; message: string } | null>(null);
   const [refiningId, setRefiningId] = useState<number | null>(null);
   const [refined, setRefined] = useState<Record<number, { start: number; end: number; windows: number }>>({});
 
@@ -61,14 +64,50 @@ export default function App() {
       .catch(() => setError("Backend not reachable. Start the app with the launcher."));
   }, []);
 
-  async function runSearch(text: string, withLyrics: boolean) {
+  useEffect(() => {
+    if (!setup || (setup.state !== "inventory" && setup.state !== "indexing")) return;
+    const timer = setInterval(() => {
+      fetch("/api/setup/status")
+        .then((r) => r.json())
+        .then((next) => {
+          setSetup(next);
+          if (next.state === "done") {
+            fetch("/api/status").then((r) => r.json()).then(setStatus).catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [setup]);
+
+  async function onIndexFolder(event: React.FormEvent) {
+    event.preventDefault();
+    if (!musicFolder.trim()) return;
+    setError("");
+    try {
+      const response = await fetch("/api/setup/index", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ root: musicFolder }),
+      });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new Error(detail?.detail || `indexing failed (${response.status})`);
+      }
+      setSetup({ state: "inventory", message: "Scanning files…" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start indexing.");
+    }
+  }
+
+  async function runSearch(text: string, withLyrics: boolean, resultLimit: number = limit) {
     setBusy(true);
     setError("");
     try {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text, top: 5, include_lyrics: withLyrics, interpretation }),
+        body: JSON.stringify({ query: text, top: resultLimit, include_lyrics: withLyrics, interpretation }),
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => null);
@@ -184,6 +223,24 @@ export default function App() {
           </p>
         )}
         <label className="lyrics-toggle">
+          <span>Results</span>
+          <select
+            value={limit}
+            disabled={busy}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setLimit(next);
+              if (searchedQuery) void runSearch(searchedQuery, includeLyrics, next);
+            }}
+            aria-label="Number of results"
+          >
+            <option value={5}>5 songs</option>
+            <option value={10}>10 songs</option>
+            <option value={20}>20 songs</option>
+            <option value={50}>50 songs</option>
+          </select>
+        </label>
+        <label className="lyrics-toggle">
           <span>Query wording</span>
           <select
             value={interpretation}
@@ -195,6 +252,26 @@ export default function App() {
             <option value="meta">Meta Spark 1.3 (needs API key)</option>
           </select>
         </label>
+        {status && status.tracks_total === 0 && (
+          <form className="search" onSubmit={onIndexFolder} style={{ marginTop: 18 }}>
+            <input
+              value={musicFolder}
+              onChange={(e) => setMusicFolder(e.target.value)}
+              placeholder="Music folder to index, e.g. D:\Music"
+              aria-label="Music folder to index"
+            />
+            <button type="submit" disabled={setup?.state === "inventory" || setup?.state === "indexing"}>
+              {setup?.state === "inventory" || setup?.state === "indexing" ? "Indexing…" : "Index this folder"}
+            </button>
+          </form>
+        )}
+        {setup && setup.state !== "idle" && (
+          <p className="hint">
+            {setup.state === "done" ? `Setup complete. ${setup.message}` : setup.message || setup.state}
+            {(setup.state === "inventory" || setup.state === "indexing") &&
+              " First run also downloads the search model. Keep this page open."}
+          </p>
+        )}
         {error && <p className="error">{error}</p>}
         {busy && <p className="hint">First search warms up the model on your GPU. Later ones are quick.</p>}
 

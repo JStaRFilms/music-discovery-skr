@@ -9,7 +9,7 @@ import numpy as np
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import config, db as dbmod
 from .search import duplicate_groups, load_matrix, rank_tracks
@@ -72,7 +72,7 @@ class SearchEngine:
             adj += self.TASTE_WEIGHTS[mark] * sims.max(axis=1)
         return adj, sum(len(v) for v in by_mark.values())
 
-    def search(self, query: str, top: int = 5, include_lyrics: bool = False,
+    def search(self, query: str, top: int = 20, include_lyrics: bool = False,
                descriptions: list[str] | None = None) -> list[dict]:
         from .embed import embed_texts
 
@@ -218,7 +218,9 @@ class FeedbackIn(BaseModel):
 
 class SearchIn(BaseModel):
     query: str
-    top: int = 5
+    # No model-side cap: cosine search over the local index can return any
+    # count. 50 is a UI sanity bound, not a retrieval limit.
+    top: int = Field(default=20, ge=1, le=50)
     include_lyrics: bool = False
     interpretation: str = "verbatim"
 
@@ -226,6 +228,10 @@ class SearchIn(BaseModel):
 class RefineIn(BaseModel):
     query: str
     track_id: int
+
+
+class SetupIn(BaseModel):
+    root: str
 
 
 def excerpt_path(window_id: int, db_path: Path) -> Path:
@@ -285,6 +291,41 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
             "lyric_windows_trusted": lyric_windows,
             "audio_leaves_machine": False,
         }
+
+    setup_state: dict = {"state": "idle", "root": None, "message": ""}
+
+    @app.get("/api/setup/status")
+    def setup_status():
+        return setup_state
+
+    @app.post("/api/setup/index")
+    def setup_index(body: SetupIn):
+        import threading
+
+        root = Path(body.root.strip())
+        if not root.is_dir():
+            raise HTTPException(status_code=400, detail=f"folder not found: {root}")
+        if setup_state["state"] in ("inventory", "indexing"):
+            raise HTTPException(status_code=409, detail="indexing already running")
+
+        def job():
+            from .embed import run_index
+            from .inventory import run_inventory
+
+            try:
+                setup_state.update(state="inventory", root=str(root), message="Scanning files…")
+                counts = run_inventory(db_path, root)
+                setup_state.update(state="indexing", message=f"Found {counts['audio']} audio files. Embedding passages…")
+                result = run_index(db_path, config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION, all_tracks=True)
+                engine._matrix = None  # force reload of the grown index
+                engine._lyric_vecs = None
+                engine._lyric_idx = None
+                setup_state.update(state="done", message=f"Indexed {result['windows_embedded']} passages on {result['device']}.")
+            except Exception as exc:  # surfaced to the UI, not swallowed
+                setup_state.update(state="error", message=str(exc)[:500])
+
+        threading.Thread(target=job, daemon=True).start()
+        return {"ok": True, "state": "inventory"}
 
     @app.post("/api/refine")
     def refine(body: RefineIn):

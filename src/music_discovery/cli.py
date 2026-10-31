@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--model", default=config.PRIMARY_MODEL_ID)
     p.add_argument("--revision", default=config.PRIMARY_MODEL_REVISION)
     p.add_argument("--query", required=True)
-    p.add_argument("--top", type=int, default=5)
+    p.add_argument("--top", type=int, default=20)
 
     p = sub.add_parser("blind-pack")
     p.add_argument("--db", type=Path, default=config.DB_PATH)
