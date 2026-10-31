@@ -35,6 +35,7 @@ coverage/
 
 # --- Music discovery local artifacts (never commit) ---
 data/
+release/
 experiments/**/excerpts/
 experiments/**/mapping.json
 experiments/lyrics_review/
