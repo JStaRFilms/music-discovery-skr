@@ -5,7 +5,9 @@
 # ffmpeg/ffprobe when found on PATH. It contains no music and no index.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$stage = Join-Path $root "release\MusicDiscovery"
+# Stage outside any installed copy: release\MusicDiscovery may be a live
+# install with a judge's index in it. Never delete or overwrite that folder.
+$stage = Join-Path $root "release\_stage\MusicDiscovery"
 $zip = Join-Path $root "release\MusicDiscovery-win64.zip"
 
 Write-Host "Building frontend..."

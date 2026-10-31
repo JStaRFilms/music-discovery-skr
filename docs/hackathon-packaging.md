@@ -85,6 +85,13 @@ Recommendation: ship the CPU build as the public installer for reliability,
 and keep the CUDA build as the power-user download. Decide before the
 PyInstaller spec is written, because it changes what gets bundled.
 
+Settled 31 October (John delegated the call): the portable build already
+resolves to CPU torch from `uv.lock`, and the clean-room test below ran on
+CPU. So the submission build is the CPU build, stated honestly in
+`packaging/JUDGE-README.txt`: small folders index in minutes, large
+libraries take much longer, and the Settings Compute picker cannot speed
+this build up. The CUDA build is the post-hackathon power-user download.
+
 ### Phase 3: demo shape for the hackathon
 
 - Demo on this machine against the existing 1,548-track index for the main
@@ -145,10 +152,27 @@ Not done, in the order it matters for the hackathon:
     Roadmap stretch goal, never built. Hackathon story value only after the
     items above.
 
-## 4. Next three actions
+## 4. Submission readiness (31 October, final pass)
 
-1. Run `packaging/build-release.ps1` and test the zip on a clean folder:
-   unzip, double-click, index a small folder, search, get 20 results.
-2. Install Inno Setup, decide CPU versus CUDA, write the PyInstaller spec.
-3. Judge the comparator pack so the submission can state, with numbers,
-   whether the second model earned its place.
+Done:
+
+1. All running app servers stopped at John's instruction. His release-folder
+   install at `release/MusicDiscovery` was updated in place (new backend and
+   frontend, index and environment preserved). Its `E:\Music` index had in
+   fact completed: 1,191 of 1,191 tracks, 5,945 sparse windows.
+2. Final artifact: `release/MusicDiscovery-win64.zip`, built by
+   `packaging/build-release.ps1`, which now stages outside any installed
+   copy so rebuilding can never wipe a live index.
+3. Clean-room test, run from that exact zip in a fresh folder with its own
+   bundled `uv.exe`: environment synced, server started, Settings reported
+   the model downloaded, a 6-track folder indexed (30 passages on CPU in
+   about a minute including model load), and "happy christmas, warm and
+   festive" returned the happy Christmas track first at 0.492. This is the
+   judge flow, exercised end to end.
+4. Demo music decision (delegated, settled): no music ships in the package.
+   The live demo runs on this machine against the existing indexed
+   libraries; judges installing the zip index their own folder.
+
+Still open after the hackathon: the Inno Setup `.exe` (PyInstaller spec not
+written), the CUDA build, and every deferred item in Section 3. None of
+them block submitting the portable zip.

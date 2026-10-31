@@ -19,8 +19,11 @@ HOW TO RUN
    5, 10, 20, or 50.
 
 NOTES
-- Windows only in this build. An NVIDIA GPU makes indexing much faster;
-  CPU works for small folders.
+- Windows only in this build. This build runs on CPU: indexing a small
+  demo folder takes a few minutes. A large library (over 1,000 tracks)
+  can take well over an hour, so start with a subfolder if you are
+  trying it out. The Compute picker in Settings cannot speed this
+  build up; a GPU build is planned after the hackathon.
 - Everything you index and vote on stays in the data folder next to the
   app. Delete it to start over. No account, no uploads.
 - Lyrics search covers passages already transcribed in a library. Fresh
