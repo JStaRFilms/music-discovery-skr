@@ -45,11 +45,20 @@ def decode_window(path: Path, start: float, seconds: float = WINDOW_SECONDS) -> 
     return audio[:TARGET_SAMPLES]
 
 
-def load_clap(model_id: str, revision: str):
+def resolve_device(pref: str = "auto", cuda_available: bool = False) -> str:
+    """User device pick from Settings. 'auto' means GPU when available."""
+    if pref == "cpu":
+        return "cpu"
+    if pref == "cuda":
+        return "cuda" if cuda_available else "cpu"
+    return "cuda" if cuda_available else "cpu"
+
+
+def load_clap(model_id: str, revision: str, device_pref: str = "auto"):
     import torch
     from transformers import AutoProcessor, ClapModel
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = resolve_device(device_pref, torch.cuda.is_available())
     model = ClapModel.from_pretrained(model_id, revision=revision).to(device)
     model.eval()
     processor = AutoProcessor.from_pretrained(model_id, revision=revision)
@@ -88,7 +97,7 @@ def embed_audio(model, processor, device: str, waves: list[np.ndarray]) -> np.nd
 
 
 def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | None = None, batch: int = 4,
-              kind: str = "sparse", all_tracks: bool = False) -> dict:
+              kind: str = "sparse", all_tracks: bool = False, device_pref: str = "auto", progress=None) -> dict:
     conn = dbmod.connect(db_path)
     where = "status='ok'" if all_tracks else "selected=1 AND status='ok'"
     tracks = conn.execute(f"SELECT * FROM tracks WHERE {where} ORDER BY id").fetchall()
@@ -106,10 +115,10 @@ def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | N
     )
     conn.commit()
 
-    model, processor, device = load_clap(model_id, revision)
+    model, processor, device = load_clap(model_id, revision, device_pref=device_pref)
     started = time.time()
     n_windows = 0
-    for track in tracks:
+    for done_tracks, track in enumerate(tracks):
         wins = dense_windows(float(track["duration_seconds"])) if kind == "dense" else sparse_windows(float(track["duration_seconds"]))
         waves, win_ids = [], []
         for start, end in wins:
@@ -145,6 +154,8 @@ def run_index(db_path: Path, model_id: str, revision: str, limit_tracks: int | N
         conn.commit()
         if rows:
             save_checkpoint(rows, out_path)
+        if progress:
+            progress(done_tracks + 1, len(tracks), n_windows)
         print(f"indexed track {track['id']} windows+={len(waves)} total_rows={next_row}", flush=True)
     elapsed = max(time.time() - started, 1e-9)
     conn.close()

@@ -56,6 +56,17 @@ body {
 .lyrics-toggle input:disabled { cursor: wait; }
 .toggle-note { color: var(--muted); }
 
+.settings {
+  margin-top: 26px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+}
+.settings-title { font-size: 16px; margin: 0 0 10px; }
+.settings-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; font-size: 14px; }
+.key-input {
+  flex: 1; min-width: 240px; padding: 9px 11px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+}
+progress { accent-color: var(--accent); height: 10px; }
+
 .error { color: var(--bad); margin-top: 14px; }
 .hint, .searched { color: var(--muted); margin-top: 14px; font-size: 14px; }
 .searched strong { color: var(--text); }

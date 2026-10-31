@@ -53,16 +53,63 @@ export default function App() {
   const [interpretation, setInterpretation] = useState("verbatim");
   const [limit, setLimit] = useState(20);
   const [musicFolder, setMusicFolder] = useState("");
-  const [setup, setSetup] = useState<{ state: string; message: string } | null>(null);
+  const [setup, setSetup] = useState<{ state: string; message: string; current?: number; total?: number } | null>(null);
+  const [appSettings, setAppSettings] = useState<{
+    device: string; interpretation: string; meta_configured: boolean;
+    model: { model: string; downloaded: boolean; size_bytes: number; state: string; message: string; downloaded_bytes: number };
+  } | null>(null);
+  const [metaKey, setMetaKey] = useState("");
+  const [settingsMsg, setSettingsMsg] = useState("");
   const [refiningId, setRefiningId] = useState<number | null>(null);
   const [refined, setRefined] = useState<Record<number, { start: number; end: number; windows: number }>>({});
+
+  function refreshSettings() {
+    fetch("/api/settings").then((r) => r.json()).then(setAppSettings).catch(() => undefined);
+    fetch("/api/setup/status").then((r) => r.json()).then(setSetup).catch(() => undefined);
+  }
 
   useEffect(() => {
     fetch("/api/status")
       .then((r) => r.json())
       .then(setStatus)
       .catch(() => setError("Backend not reachable. Start the app with the launcher."));
+    refreshSettings();
   }, []);
+
+  const setupActive = setup?.state === "inventory" || setup?.state === "indexing";
+  const modelDownloading = appSettings?.model.state === "downloading";
+  useEffect(() => {
+    if (!setupActive && !modelDownloading) return;
+    const timer = setInterval(() => {
+      refreshSettings();
+      fetch("/api/status").then((r) => r.json()).then(setStatus).catch(() => undefined);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [setupActive, modelDownloading]);
+
+  async function saveSettings(updates: Record<string, string>) {
+    const response = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    if (response.ok) {
+      setSettingsMsg("Saved on this machine.");
+      refreshSettings();
+    } else {
+      setSettingsMsg("Could not save settings.");
+    }
+  }
+
+  async function onDownloadModel() {
+    setSettingsMsg("");
+    const response = await fetch("/api/model/download", { method: "POST" });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      setSettingsMsg(detail?.detail || "Download could not start.");
+    }
+    refreshSettings();
+  }
 
   useEffect(() => {
     if (!setup || (setup.state !== "inventory" && setup.state !== "indexing")) return;
@@ -266,14 +313,79 @@ export default function App() {
           </form>
         )}
         {setup && setup.state !== "idle" && (
-          <p className="hint">
-            {setup.state === "done" ? `Setup complete. ${setup.message}` : setup.message || setup.state}
-            {(setup.state === "inventory" || setup.state === "indexing") &&
-              " First run also downloads the search model. Keep this page open."}
-          </p>
+          <div className="hint">
+            <p style={{ margin: "0 0 6px" }}>
+              {setup.state === "done" ? `Setup complete. ${setup.message}` : setup.message || setup.state}
+              {(setup.state === "inventory" || setup.state === "indexing") &&
+                " First run also downloads the search model. Keep this page open."}
+            </p>
+            {(setup.state === "inventory" || setup.state === "indexing") && setup.total ? (
+              <progress value={setup.current ?? 0} max={setup.total} style={{ width: "100%" }} />
+            ) : null}
+          </div>
         )}
         {error && <p className="error">{error}</p>}
         {busy && <p className="hint">First search warms up the model on your GPU. Later ones are quick.</p>}
+
+        <section className="settings" aria-label="Settings">
+          <h2 className="settings-title">Settings &amp; model</h2>
+          {appSettings && !appSettings.model.downloaded && appSettings.model.state !== "downloading" && (
+            <p className="error">
+              The search model is not downloaded yet, so search is paused. Download it below, then search.
+            </p>
+          )}
+          <div className="settings-row">
+            <span>
+              Search model: <strong>{appSettings?.model.model ?? "…"}</strong>{" "}
+              {appSettings?.model.downloaded
+                ? `— downloaded (${Math.round(appSettings.model.size_bytes / 1_000_000)} MB on this machine)`
+                : appSettings?.model.state === "downloading"
+                  ? `— downloading… ${Math.round(appSettings.model.downloaded_bytes / 1_000_000)} MB so far`
+                  : "— not downloaded yet (about 800 MB, one time, needs internet)"}
+            </span>
+            <button type="button" className="from-start" onClick={() => void onDownloadModel()}
+              disabled={!appSettings || appSettings.model.downloaded || appSettings.model.state === "downloading"}>
+              {appSettings?.model.downloaded ? "Downloaded" : "Download model"}
+            </button>
+          </div>
+          {appSettings?.model.state === "downloading" && <progress style={{ width: "100%" }} />}
+          {appSettings?.model.state === "error" && <p className="error">{appSettings.model.message}</p>}
+          <label className="lyrics-toggle">
+            <span>Compute</span>
+            <select value={appSettings?.device ?? "auto"} disabled={!appSettings}
+              onChange={(e) => void saveSettings({ device: e.target.value })} aria-label="Compute device">
+              <option value="auto">Auto (GPU if available)</option>
+              <option value="cuda">GPU (NVIDIA)</option>
+              <option value="cpu">CPU (works anywhere, slower indexing)</option>
+            </select>
+            <span className="toggle-note">Saved on this machine. Applies from the next model load.</span>
+          </label>
+          <div className="settings-row">
+            <span>
+              Meta Spark query wording <span className="toggle-note">— optional. The app works fully without it; verbatim search is the default and nothing is sent anywhere.</span>
+            </span>
+          </div>
+          <div className="settings-row">
+            <input type="password" value={metaKey} onChange={(e) => setMetaKey(e.target.value)}
+              placeholder={appSettings?.meta_configured ? "API key saved — paste a new one to replace it" : "Paste Meta API key (optional)"}
+              aria-label="Meta API key" className="key-input" />
+            <button type="button" className="from-start" disabled={!metaKey.trim()}
+              onClick={() => { void saveSettings({ meta_api_key: metaKey }); setMetaKey(""); }}>
+              Save key
+            </button>
+            {appSettings?.meta_configured && (
+              <button type="button" className="from-start"
+                onClick={() => void saveSettings({ meta_api_key: "" })}>
+                Remove key
+              </button>
+            )}
+          </div>
+          <p className="toggle-note">
+            Keys are stored only in a local settings file on this machine and are never shown again.
+            Picking Meta Spark in Query wording without a working key gives an explicit error, never a silent swap.
+          </p>
+          {settingsMsg && <p className="hint">{settingsMsg}</p>}
+        </section>
 
         {searchedQuery && !busy && (
           <p className="searched">

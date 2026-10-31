@@ -17,6 +17,16 @@ Date: 31 October 2026. Status: packaging started. Result limit raised from 5 to 
 - The index location can move out of the install folder with the
   `MUSIC_DISCOVERY_DATA` environment variable (`src/music_discovery/config.py`).
   Default is unchanged, so the existing 1,548-track index is untouched.
+- A Settings & model section now lives in the app (added 31 October after
+  John tested the portable build and could not see progress):
+  model download status with a Download button and live downloaded-bytes
+  progress, indexing progress with track counts (`current`/`total`, persisted
+  to `setup-state.json` so a refresh mid-index still shows it), a Compute
+  picker (Auto / GPU / CPU, persisted in `settings.json` and applied at model
+  load), and an optional Meta Spark key field. The app works fully without
+  the Meta key; verbatim search is the default. Search and indexing refer
+  the user to Settings when the model is not downloaded yet
+  (`require_model_download` gate in `src/music_discovery/server.py`).
 
 ## 2. How a judge installs it: the plan
 
@@ -35,8 +45,8 @@ Target: one file, double-click, no terminal, no dev server, no Node, no `uv run`
 - The CLAP model is not in the zip. First search or first indexing downloads
   the pinned checkpoint `laion/larger_clap_music_and_speech` at revision
   `195c3a3e…` from Hugging Face into the normal HF cache. Measured on this
-  machine: about 1.6 GB for that checkpoint family. The app already does this
-  download through Transformers; packaging only needs to say so on screen.
+  machine: about 780 MB for the pinned revision snapshot. The Settings
+  section shows the download with live byte progress.
 - FFmpeg must travel with the app. Today `ffmpeg` and `ffprobe` are assumed
   to be on PATH (`src/music_discovery/embed.py`, `inventory.py`). The release
   script copies them in when it finds them; a release built without them is
@@ -103,10 +113,12 @@ Not done, in the order it matters for the hackathon:
    story in the submission.
 2. Meta Spark live test. `MetaSparkProvider.interpret` still raises
    `NotImplementedError` even with a key
-   (`src/music_discovery/provider.py`). The plumbing, caching table, and UI
-   selector exist; the live call and the A/B against verbatim do not. The
-   kill rule from the stack decision is untested: expansion must beat
-   verbatim on held-out queries or it is cut and the submission says so.
+   (`src/music_discovery/provider.py`). Settings now stores the key locally
+   and the UI states plainly that the app works without it; the live call
+   and the A/B against verbatim still do not exist. The kill rule from the
+   stack decision is untested: expansion must beat verbatim on held-out
+   queries or it is cut and the submission says so. Deferred past the
+   hackathon: verbatim ships, Meta is an optional setting, not a claim.
 3. True one-click installer. Phase 2 above. Today the launcher is a `.bat`
    that needs `uv` on first run. No `.exe` exists yet.
 4. Temporal transition scoring. "Starts reflective and becomes determined"

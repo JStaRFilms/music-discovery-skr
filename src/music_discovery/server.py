@@ -36,12 +36,17 @@ class SearchEngine:
         if self._matrix is not None:
             return
         from .embed import embed_texts, load_clap  # noqa: F401  (kept for symmetry)
+        from .settings import load_settings
 
         self._matrix, self._meta = load_matrix(
             self.db_path, config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION, kind="sparse"
         )
         self._dup_groups = duplicate_groups(self._matrix, self._meta)
-        model, processor, device = load_clap(config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION)
+        data_dir = self.db_path.parent.parent if self.db_path.parent.name == "index" else self.db_path.parent
+        device_pref = load_settings(data_dir)["device"]
+        model, processor, device = load_clap(
+            config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION, device_pref=device_pref
+        )
         self._model = (model, processor, device)
 
     @property
@@ -234,6 +239,12 @@ class SetupIn(BaseModel):
     root: str
 
 
+class SettingsIn(BaseModel):
+    device: str | None = None
+    meta_api_key: str | None = None
+    interpretation: str | None = None
+
+
 def excerpt_path(window_id: int, db_path: Path) -> Path:
     EXCERPT_DIR.mkdir(parents=True, exist_ok=True)
     out = EXCERPT_DIR / f"w{window_id}.wav"
@@ -258,9 +269,11 @@ def excerpt_path(window_id: int, db_path: Path) -> Path:
     return out
 
 
-def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PATH) -> FastAPI:
+def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PATH,
+               require_model_download: bool = False) -> FastAPI:
     app = FastAPI(title="Music Discovery (local)")
     engine = engine or SearchEngine(db_path)
+    data_dir = db_path.parent.parent if db_path.parent.name == "index" else db_path.parent
 
     @app.get("/api/status")
     def status():
@@ -292,7 +305,80 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
             "audio_leaves_machine": False,
         }
 
-    setup_state: dict = {"state": "idle", "root": None, "message": ""}
+    import json as _json
+
+    setup_state_path = data_dir / "setup-state.json"
+    setup_state: dict = {"state": "idle", "root": None, "message": "", "current": 0, "total": 0}
+    if setup_state_path.exists():
+        try:
+            setup_state.update(_json.loads(setup_state_path.read_text(encoding="utf-8")))
+            if setup_state["state"] in ("inventory", "indexing"):
+                setup_state.update(state="idle", message="Indexing stopped when the app closed. Run it again to resume; finished tracks are kept.")
+        except (OSError, ValueError):
+            pass
+    model_state: dict = {"state": "idle", "message": "", "baseline_bytes": 0}
+
+    def save_setup_state():
+        try:
+            setup_state_path.parent.mkdir(parents=True, exist_ok=True)
+            setup_state_path.write_text(_json.dumps(setup_state), encoding="utf-8")
+        except OSError:
+            pass
+
+    @app.get("/api/settings")
+    def get_settings():
+        from .settings import load_settings, model_status, public_settings
+
+        saved = load_settings(data_dir)
+        status = model_status()
+        downloading = model_state["state"] == "downloading"
+        return {
+            **public_settings(saved),
+            "model": {
+                **status,
+                "state": model_state["state"],
+                "message": model_state["message"],
+                "downloaded_bytes": max(status["size_bytes"] - model_state["baseline_bytes"], 0) if downloading else status["size_bytes"],
+            },
+            "setup": setup_state,
+        }
+
+    @app.post("/api/settings")
+    def update_settings(body: SettingsIn):
+        from .settings import load_settings, public_settings, save_settings
+
+        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        if "device" in updates and updates["device"] not in ("auto", "cuda", "cpu"):
+            raise HTTPException(status_code=422, detail="device must be auto, cuda, or cpu")
+        saved = save_settings(updates, data_dir)
+        if "device" in updates and hasattr(engine, "_model"):
+            engine._model = None  # next search reloads on the chosen device
+            engine._matrix = None
+        return public_settings(saved)
+
+    @app.post("/api/model/download")
+    def download_model():
+        import threading
+
+        from .settings import model_status
+
+        if model_status()["downloaded"]:
+            return {"ok": True, "state": "done", "message": "Model already downloaded."}
+        if model_state["state"] == "downloading":
+            raise HTTPException(status_code=409, detail="model download already running")
+        model_state.update(state="downloading", message="Downloading search model…", baseline_bytes=model_status()["size_bytes"])
+
+        def job():
+            try:
+                from huggingface_hub import snapshot_download
+
+                snapshot_download(repo_id=config.PRIMARY_MODEL_ID, revision=config.PRIMARY_MODEL_REVISION)
+                model_state.update(state="done", message="Model downloaded.")
+            except Exception as exc:
+                model_state.update(state="error", message=str(exc)[:500])
+
+        threading.Thread(target=job, daemon=True).start()
+        return {"ok": True, "state": "downloading"}
 
     @app.get("/api/setup/status")
     def setup_status():
@@ -311,18 +397,31 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
         def job():
             from .embed import run_index
             from .inventory import run_inventory
+            from .settings import load_settings
 
             try:
-                setup_state.update(state="inventory", root=str(root), message="Scanning files…")
-                counts = run_inventory(db_path, root)
-                setup_state.update(state="indexing", message=f"Found {counts['audio']} audio files. Embedding passages…")
-                result = run_index(db_path, config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION, all_tracks=True)
+                setup_state.update(state="inventory", root=str(root), message="Scanning files…", current=0, total=0)
+                save_setup_state()
+                counts = run_inventory(
+                    db_path, root,
+                    progress=lambda cur, tot, audio: (setup_state.update(current=cur, total=tot, message=f"Scanning files: {audio} audio found…"), save_setup_state()),
+                )
+                setup_state.update(state="indexing", current=0, total=0,
+                                   message=f"Found {counts['audio']} audio files. Downloading model if needed, then embedding passages…")
+                save_setup_state()
+                result = run_index(
+                    db_path, config.PRIMARY_MODEL_ID, config.PRIMARY_MODEL_REVISION, all_tracks=True,
+                    device_pref=load_settings(data_dir)["device"],
+                    progress=lambda cur, tot, wins: (setup_state.update(current=cur, total=tot, message=f"Embedding track {cur} of {tot} ({wins} passages)…"), save_setup_state()),
+                )
                 engine._matrix = None  # force reload of the grown index
                 engine._lyric_vecs = None
                 engine._lyric_idx = None
                 setup_state.update(state="done", message=f"Indexed {result['windows_embedded']} passages on {result['device']}.")
+                save_setup_state()
             except Exception as exc:  # surfaced to the UI, not swallowed
                 setup_state.update(state="error", message=str(exc)[:500])
+                save_setup_state()
 
         threading.Thread(target=job, daemon=True).start()
         return {"ok": True, "state": "inventory"}
@@ -336,9 +435,16 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
     @app.post("/api/search")
     def search(body: SearchIn):
         from .provider import get_provider, interpretation_to_json, query_hash
+        from .settings import load_settings, model_status
 
+        if require_model_download and not model_status()["downloaded"]:
+            raise HTTPException(
+                status_code=409,
+                detail="Search model is not downloaded yet. Open Settings on this page and download it first.",
+            )
+        saved = load_settings(data_dir)
         try:
-            provider = get_provider(body.interpretation)
+            provider = get_provider(body.interpretation, api_key=saved["meta_api_key"] or None)
             interp = provider.interpret(body.query.strip())
         except (RuntimeError, NotImplementedError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -430,7 +536,7 @@ def create_app(engine: SearchEngine | None = None, db_path: Path = config.DB_PAT
 def main() -> None:
     import uvicorn
 
-    uvicorn.run(create_app(), host="127.0.0.1", port=8765)
+    uvicorn.run(create_app(require_model_download=True), host="127.0.0.1", port=8765)
 
 
 if __name__ == "__main__":

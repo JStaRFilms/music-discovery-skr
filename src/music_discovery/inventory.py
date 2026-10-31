@@ -47,11 +47,11 @@ def source_folder(root: Path, path: Path) -> str:
     return str(rel.parent) if str(rel.parent) != "." else "(root)"
 
 
-def run_inventory(db_path: Path, root: Path, collection: str = "music") -> dict:
+def run_inventory(db_path: Path, root: Path, collection: str = "music", progress=None) -> dict:
     conn = dbmod.connect(db_path)
     files = sorted(p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in CANDIDATE_SUFFIXES)
     counts = {"seen": len(files), "audio": 0, "skipped": 0, "failed": 0}
-    for path in files:
+    for i, path in enumerate(files):
         info = probe(path)
         if info is None:
             counts["skipped"] += 1
@@ -80,6 +80,8 @@ def run_inventory(db_path: Path, root: Path, collection: str = "music") -> dict:
         if counts["audio"] % 100 == 0:
             conn.commit()
             print(f"inventory: {counts}", file=sys.stderr)
+        if progress and (i % 25 == 0 or i == len(files) - 1):
+            progress(i + 1, len(files), counts["audio"])
     conn.commit()
     conn.close()
     return counts
